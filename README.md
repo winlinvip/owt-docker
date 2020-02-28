@@ -8,7 +8,7 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server).
 
 ```bash
 docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
-    reg.docker.alibaba-inc.com/alirtc/owt:4.3 bash
+    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
 
 > Note: Docker使用的版本是[owt-server 4.3](https://github.com/open-webrtc-toolkit/owt-server/releases/tag/v4.3), [owt-client 4.3](https://github.com/open-webrtc-toolkit/owt-client-javascript/releases/tag/v4.3), [IntelMediaSDK 18.4.0](https://github.com/Intel-Media-SDK/MediaSDK/releases/download/intel-mediasdk-18.4.0/MediaStack.tar.gz).
@@ -32,7 +32,7 @@ git clone https://github.com/open-webrtc-toolkit/owt-server.git
 cd ~/git/owt-server &&
 docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     --privileged -v `pwd`/source:/tmp/git/owt-docker/owt-server-4.3/source
-    reg.docker.alibaba-inc.com/alirtc/owt:4.3 bash
+    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
 
 > Remark: 只映射代码source目录，不要覆盖了依赖例如build等目录。
