@@ -27,6 +27,10 @@ RUN git config --global user.email "you@example.com" && \
 
 # @see https://blog.piasy.com/2019/04/14/OWT-Server-Quick-Start/index.html
 ADD owt-server-4.3.tar.gz /tmp/git/owt-docker
+RUN COPY owt-server-4.3/build/libdeps/*.bz2 /tmp/git/owt-docker/owt-server-4.3/build/libdeps
+RUN COPY owt-server-4.3/build/libdeps/*.gz /tmp/git/owt-docker/owt-server-4.3/build/libdeps
+RUN COPY owt-server-4.3/third_party/openh264/v1.7.0.tar.gz /tmp/git/owt-docker/owt-server-4.3/third_party/openh264
+RUN COPY owt-server-4.3/third_party/webrtc/src/tools-woogeen/tmp/*.tar.gz /tmp/git/owt-docker/owt-server-4.3/third_party/webrtc/src/tools-woogeen/tmp
 RUN cd /tmp/git/owt-docker/owt-server-4.3 && ./scripts/installDepsUnattended.sh && \
     echo "./scripts/build.js -t all --check" && \
     echo "./scripts/pack.js -t all --install-module --sample-path $CLIENT_SAMPLE_PATH"
