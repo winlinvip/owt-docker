@@ -32,9 +32,9 @@ COPY owt-server-4.3/build/libdeps/*.bz2 ./build/libdeps/
 COPY owt-server-4.3/build/libdeps/*.gz ./build/libdeps/
 COPY owt-server-4.3/third_party/openh264/v1.7.0.tar.gz ./third_party/openh264/
 COPY owt-server-4.3/third_party/webrtc/src/tools-woogeen/tmp/*.tar.gz ./third_party/webrtc/src/tools-woogeen/tmp/
-RUN cd /tmp/git/owt-docker/owt-server-4.3 && ./scripts/installDepsUnattended.sh && \
-    echo "./scripts/build.js -t all --check" && \
-    echo "./scripts/pack.js -t all --install-module --sample-path $CLIENT_SAMPLE_PATH"
+RUN ./scripts/installDepsUnattended.sh
+RUN echo "./scripts/build.js -t all --check" && \
+RUN echo "./scripts/pack.js -t all --install-module --sample-path $CLIENT_SAMPLE_PATH"
 
 WORKDIR /tmp/git/owt-docker/owt-server-4.3
 CMD ["pwd"]
