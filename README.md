@@ -11,7 +11,7 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server).
 **Step 0:** 当然你得有个Docker。
 
 可以从[docker.io](https://www.docker.com/products/docker-desktop)下载一个，安装就好了。
-执行`docker version`，可以看到客户端和服务器版本（服务器也是在你本机的）：
+执行`docker version`，可以看到客户端和服务器版本（Docker的服务器也是在你本机的）：
 
 ```bash
 Mac:owt-docker chengli.ycl$ docker version
@@ -27,10 +27,16 @@ Server:
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'`
 ```
 
-若觉得命令麻烦，可以下载脚本：
+上面是Mac的脚本，Linux上需要更换，也可以下载脚本获取：
 
-```
+```bash
 HostIP=`curl -sSL https://raw.githubusercontent.com/ossrs/srs-docker/v3/auto/get_host_ip.sh | bash`
+```
+
+或者直接设置为自己的IP：
+
+```bash
+HostIP="192.168.1.4"
 ```
 
 **Step 2:** 设置访问机器的hosts。
@@ -46,8 +52,7 @@ if [[ `grep -q docker-host /etc/hosts && echo 'YES'` == 'YES' ]]; then
     sed "s/^.*docker-host/$HostIP docker-host/g" /etc/hosts >/tmp/hosts &&
     cat /tmp/hosts > /etc/hosts && rm -f /tmp/hosts;
 else
-    echo "" >> /etc/hosts &&
-    echo "# For OWT docker" >> /etc/hosts &&
+    echo "" >> /etc/hosts && echo "# For OWT docker" >> /etc/hosts &&
     echo "$HostIP docker-host" >> /etc/hosts;
 fi &&
 sudo chown root /etc/hosts &&
@@ -103,7 +108,7 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 ```bash
 docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
-    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
+    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:config bash
 ```
 
 > Note: Docker使用的版本是[owt-server 4.3](https://github.com/open-webrtc-toolkit/owt-server/releases/tag/v4.3), [owt-client 4.3](https://github.com/open-webrtc-toolkit/owt-client-javascript/releases/tag/v4.3), [IntelMediaSDK 18.4.0](https://github.com/Intel-Media-SDK/MediaSDK/releases/download/intel-mediasdk-18.4.0/MediaStack.tar.gz).
@@ -287,26 +292,5 @@ network_interfaces = [{name="eth0",replaced_ip_address="192.168.1.4"}]  # defaul
 [portal]
 ip_address = "192.168.1.4" #default: ""
 ```
-
-## Tips
-
-如果发现自己的Docker太大，可以先把一些镜像导出，比如：
-
-```bash
-docker save registry.cn-hangzhou.aliyuncs.com/ossrs/owt:pack -o owt-pack.tar
-```
-
-删除Docker文件，可以选择下面任意方式删除Docker的磁盘文件：
-
-* 点`Reset`，然后点`Remove all data`。
-* 点`Disk`，然后点`Open in Finder`，直接删除`Docker.qcow2`，然后重启Docker。
-
-Docker重启后，导入你要的镜像，例如：
-
-```bash
-docker load -i owt-pack.tar
-```
-
-这样就可以将Docker占用的临时磁盘空间彻底瘦身。
 
 
