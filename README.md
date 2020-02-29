@@ -6,7 +6,6 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server).
 
 > Remark: 下面说明在内网或本机使用Docker快速搭建OWT开发环境，若OWT使用公网IP或域名，参考[Usage: Internet](#usage-internet)。
 
-目前提供OWT 4.3的镜像开发环境，若需要更新代码需要修改Dockerfile，或者参考[Deubg](#debug)重新编译。
 下面我们以MacPro为例，如何使用镜像搭建内网Demo，其他OS将命令替换就可以。
 
 **Step 0:** 当然你得有个Docker。
@@ -94,6 +93,8 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 > Note: 我们使用域名来访问OWT服务，这样宿主机IP变更后，只需要执行脚本就可以，参考[Docker Host IP](#docker-host-ip)。
 
+> Note: 目前提供OWT 4.3的镜像开发环境，若需要更新代码需要修改Dockerfile，或者参考[Deubg](#debug)重新编译。
+
 ## Usage: Internet
 
 > Remark: 下面说明公网IP或域名搭建OWT环境，若在内网或本机使用Docker快速搭建OWT开发环境，参考[Usage:](#usage)。
@@ -133,6 +134,8 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 * https://182.28.12.12:8080/ 第一次先访问下信令，若使用域名则不需要手动访问。
 * https://182.28.12.12:3004/ OWT演示页面。
+
+> Note: 目前提供OWT 4.3的镜像开发环境，若需要更新代码需要修改Dockerfile，或者参考[Deubg](#debug)重新编译。
 
 ## Update
 
