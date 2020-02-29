@@ -28,7 +28,7 @@ Server:
 
 ```bash
 docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
-    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
+    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:config bash
 ```
 
 > Note: Docker使用的版本是[owt-server 4.3](https://github.com/open-webrtc-toolkit/owt-server/releases/tag/v4.3), [owt-client 4.3](https://github.com/open-webrtc-toolkit/owt-client-javascript/releases/tag/v4.3), [IntelMediaSDK 18.4.0](https://github.com/Intel-Media-SDK/MediaSDK/releases/download/intel-mediasdk-18.4.0/MediaStack.tar.gz).
