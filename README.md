@@ -35,7 +35,7 @@ docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
 
 > Note: OWT需要开一系列范围的UDP端口，docker映射大范围端口会有问题，所以我们只指定了50个测试端口，已经在镜像中修改了配置，参考[Port Range](#port-range)。
 
-**Step 2:** 设置OWT的IP信息，设置为Mac的地址。也可以自动设置，参考[Usage: HostIP](#usage-hostip)。
+**Step 2:** 设置OWT的IP信息，设置为Mac的IP地址。也可以自动获取和设置IP，参考[Usage: HostIP](#usage-hostip)。
 
 ```bash
 # vi dist/webrtc_agent/agent.toml
