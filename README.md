@@ -50,7 +50,7 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 > Remark: 注意会有个提示是否添加MongoDB账号，`Update RabbitMQ/MongoDB Account?`，可以忽略或写No（默认5秒左右就会忽略）。
 
-**Step 5:** 大功告成。
+**Step 4:** 大功告成。
 
 打开OWT的默认演示页面，私有证书需要选择`Advanced => Proceed to xxx`：
 
@@ -64,14 +64,16 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 > Note: 目前提供OWT 4.3的镜像开发环境，若需要更新代码需要修改Dockerfile，或者参考[Deubg](#debug)重新编译。
 
-下面说明在内网或本机使用Docker快速搭建OWT开发环境：
+还可以尝试其他方式，比如：
 
-* 可以使用脚本修改配置文件中的IP，参考[Usage: HostIP](#usage-hostip)。
-* 若OWT使用公网IP或域名，参考[Usage: Internet](#usage-internet)。
+* 在内网使用镜像快速搭建OWT，需要修改IP，参考[Usage](#usage)。
+* 在内网用镜像搭建OWT，使用脚本自动获取IP，自动修改OWT配置文件中的IP，参考[Usage: HostIP](#usage-hostip)。
+* 有公网IP或域名时，用镜像搭建OWT服务，参考[Usage: Internet](#usage-internet)。
 
 ## Usage: HostIP
 
-> Remark: 下面说明在内网或本机使用Docker快速搭建OWT开发环境，若OWT使用公网IP或域名，参考[Usage: Internet](#usage-internet)。
+在之前[Usage](#usage)中，我们说明了如何在内网用镜像快速搭建OWT服务，但需要修改OWT的配置文件。
+这里我们说明如何使用脚本自动获取IP，自动修改OWT配置文件中的IP。
 
 下面我们以MacPro为例，如何使用镜像搭建内网Demo，其他OS将命令替换就可以。
 
@@ -167,6 +169,12 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 > Note: 目前提供OWT 4.3的镜像开发环境，若需要更新代码需要修改Dockerfile，或者参考[Deubg](#debug)重新编译。
 
+还可以尝试其他方式，比如：
+
+* 在内网使用镜像快速搭建OWT，需要修改IP，参考[Usage](#usage)。
+* 在内网用镜像搭建OWT，使用脚本自动获取IP，自动修改OWT配置文件中的IP，参考[Usage: HostIP](#usage-hostip)。
+* 有公网IP或域名时，用镜像搭建OWT服务，参考[Usage: Internet](#usage-internet)。
+
 ## Usage: Internet
 
 > Remark: 下面说明公网IP或域名搭建OWT环境，若在内网或本机使用Docker快速搭建OWT开发环境，参考[Usage:](#usage)。
@@ -208,6 +216,12 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 * https://182.28.12.12:3004/ OWT演示页面。
 
 > Note: 目前提供OWT 4.3的镜像开发环境，若需要更新代码需要修改Dockerfile，或者参考[Deubg](#debug)重新编译。
+
+还可以尝试其他方式，比如：
+
+* 在内网使用镜像快速搭建OWT，需要修改IP，参考[Usage](#usage)。
+* 在内网用镜像搭建OWT，使用脚本自动获取IP，自动修改OWT配置文件中的IP，参考[Usage: HostIP](#usage-hostip)。
+* 有公网IP或域名时，用镜像搭建OWT服务，参考[Usage: Internet](#usage-internet)。
 
 ## Update
 
