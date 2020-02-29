@@ -238,8 +238,10 @@ git clone https://github.com/open-webrtc-toolkit/owt-server.git
 
 ``` bash
 cd ~/git/owt-server &&
+HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
 docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     --privileged -v `pwd`/source:/tmp/git/owt-docker/owt-server-4.3/source
+    --add-host=docker-host:$HostIP \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
 
