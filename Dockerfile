@@ -7,7 +7,7 @@ FROM ubuntu:bionic
 
 # For system.
 RUN apt-get update
-RUN apt-get install -y aptitude gdb \
+RUN apt-get install -y aptitude gdb net-tools inetutils-ping vim \
     ca-certificates git lsb-release mongodb nodejs npm sudo wget
 RUN npm install -g grunt-cli node-gyp
 
@@ -30,8 +30,8 @@ ADD owt-server-4.3.tar.gz /tmp/git/owt-docker
 WORKDIR /tmp/git/owt-docker/owt-server-4.3
 COPY owt-server-4.3/build/libdeps/*.bz2 ./build/libdeps/
 RUN ./scripts/installDepsUnattended.sh
-RUN echo "./scripts/build.js -t all --check"
-RUN echo "./scripts/pack.js -t all --install-module --sample-path $CLIENT_SAMPLE_PATH"
+RUN ./scripts/build.js -t all --check
+RUN ./scripts/pack.js -t all --install-module --sample-path $CLIENT_SAMPLE_PATH
 
 WORKDIR /tmp/git/owt-docker/owt-server-4.3
 CMD ["pwd"]

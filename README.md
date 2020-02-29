@@ -15,6 +15,12 @@ docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
 
 > Note: OWT需要开一系列范围的UDP端口，docker映射大范围端口会有问题，所以我们只指定了50个测试端口，启动owt-server后需要修改配置文件。
 
+然后输入启动命令：
+
+```
+./dist/bin/init-all.sh && ./dist/bin/start-all.sh
+```
+
 ## Update
 
 如果需要修改代码后编译，可以将本地的代码映射到docker。
