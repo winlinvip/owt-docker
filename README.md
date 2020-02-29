@@ -4,6 +4,73 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server).
 
 ## Usage
 
+下面说明在内网或本机使用Docker快速搭建OWT开发环境：
+
+* 可以使用脚本修改配置文件中的IP，参考[Usage: HostIP](#usage-hostip)。
+* 若OWT使用公网IP或域名，参考[Usage: Internet](#usage-internet)。
+
+下面我们以MacPro为例，如何使用镜像搭建内网Demo，其他OS将命令替换就可以。
+
+**Step 0:** 当然你得有个Docker。
+
+可以从[docker.io](https://www.docker.com/products/docker-desktop)下载一个，安装就好了。
+执行`docker version`，可以看到客户端和服务器版本（Docker的服务器也是在你本机的）：
+
+```bash
+Mac:owt-docker chengli.ycl$ docker version
+Client:
+ Version:	17.12.0-ce
+Server:
+  Version:	17.12.0-ce
+```
+
+**Step 1:** 通过Docker镜像，启动OWT环境。
+
+```bash
+docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
+```
+
+> Note: Docker使用的版本是[owt-server 4.3](https://github.com/open-webrtc-toolkit/owt-server/releases/tag/v4.3), [owt-client 4.3](https://github.com/open-webrtc-toolkit/owt-client-javascript/releases/tag/v4.3), [IntelMediaSDK 18.4.0](https://github.com/Intel-Media-SDK/MediaSDK/releases/download/intel-mediasdk-18.4.0/MediaStack.tar.gz).
+
+> Note: OWT需要开一系列范围的UDP端口，docker映射大范围端口会有问题，所以我们只指定了50个测试端口，已经在镜像中修改了配置，参考[Port Range](#port-range)。
+
+**Step 2:** 设置OWT的IP信息，设置为Mac的地址。也可以自动设置，参考[Usage: HostIP](#usage-hostip)。
+
+```bash
+# vi dist/webrtc_agent/agent.toml
+[webrtc]
+network_interfaces = [{name="eth0",replaced_ip_address="192.168.1.4"}]  # default: []
+
+# vi dist/portal/portal.toml
+[portal]
+ip_address = "192.168.1.4" #default: ""
+```
+
+**Step 3:** 输入命令，初始化OWT和启动服务。
+
+```bash
+cd dist && ./bin/init-all.sh && ./bin/start-all.sh
+```
+
+> Remark: 注意会有个提示是否添加MongoDB账号，`Update RabbitMQ/MongoDB Account?`，可以忽略或写No（默认5秒左右就会忽略）。
+
+**Step 5:** 大功告成。
+
+打开OWT的默认演示页面，私有证书需要选择`Advanced => Proceed to xxx`：
+
+* https://192.168.1.4:3004/
+
+> Remark: 由于证书问题，第一次需要在浏览器，先打开OWT信令服务(Portal)页面（后续就不用了）：
+
+* https://192.168.1.4:8080/
+
+> Note: 我们也可以使用域名来访问OWT服务，这样就不用每次IP变更后修改配置文件，参考[Usage: HostIP](#usage-hostip)。
+
+> Note: 目前提供OWT 4.3的镜像开发环境，若需要更新代码需要修改Dockerfile，或者参考[Deubg](#debug)重新编译。
+
+## Usage: HostIP
+
 > Remark: 下面说明在内网或本机使用Docker快速搭建OWT开发环境，若OWT使用公网IP或域名，参考[Usage: Internet](#usage-internet)。
 
 下面我们以MacPro为例，如何使用镜像搭建内网Demo，其他OS将命令替换就可以。
