@@ -22,7 +22,7 @@ Server:
 **Step 1:** 通过Docker镜像，启动OWT环境。
 
 ```bash
-docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:config bash
 ```
 
@@ -59,6 +59,10 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 由于证书问题，第一次需要在浏览器，先打开OWT信令服务(Portal)页面（后续就不用了）：
 
 * https://192.168.1.4:8080/
+
+访问管理后台，注意启动服务时有个sampleServiceId和sampleServiceKey，打开页面会要求输入这个信息：
+
+* https://192.168.1.4:3300/console
 
 > Note: 我们也可以使用域名来访问OWT服务，这样就不用每次IP变更后修改配置文件，参考[Usage: HostIP](#usage-hostip)。
 
@@ -132,7 +136,7 @@ sudo chown root /etc/hosts && echo "Hosts patching done:" && grep docker-host /e
 
 ```bash
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
-docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     --add-host=docker-host:$HostIP \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
@@ -161,6 +165,10 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 * https://docker-host:8080/
 
+访问管理后台，注意启动服务时有个sampleServiceId和sampleServiceKey，打开页面会要求输入这个信息：
+
+* https://docker-host:3300/console
+
 > Note: 我们使用域名来访问OWT服务，这样宿主机IP变更后，只需要执行脚本就可以，参考[Docker Host IP](#docker-host-ip)。
 
 > Note: 目前提供OWT 4.3的镜像开发环境，若需要更新代码需要修改Dockerfile，或者参考[Deubg](#debug)重新编译。
@@ -178,7 +186,7 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 **Step 1:** 通过Docker镜像，启动OWT环境。
 
 ```bash
-docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:config bash
 ```
 
@@ -216,6 +224,10 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 * https://182.28.12.12:8080/
 
+访问管理后台，注意启动服务时有个sampleServiceId和sampleServiceKey，打开页面会要求输入这个信息：
+
+* https://182.28.12.12:3300/console
+
 > Note: 目前提供OWT 4.3的镜像开发环境，若需要更新代码需要修改Dockerfile，或者参考[Deubg](#debug)重新编译。
 
 还可以尝试其他方式，比如：
@@ -240,7 +252,7 @@ git clone https://github.com/open-webrtc-toolkit/owt-server.git
 ``` bash
 cd ~/git/owt-server &&
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
-docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     --privileged -v `pwd`/source:/tmp/git/owt-docker/owt-server-4.3/source
     --add-host=docker-host:$HostIP \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
