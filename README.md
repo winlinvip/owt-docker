@@ -20,7 +20,7 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server) from 
 
 下面我们以MacPro为例，如何使用镜像搭建内网Demo，其他OS将命令替换就可以。
 
-**>> Step 0: 当然你得有个Docker。**
+**>>> Step 0: 当然你得有个Docker。**
 
 可以从[docker.io](https://www.docker.com/products/docker-desktop)下载一个，安装就好了。
 执行`docker version`，应该可以看到Docker版本：
@@ -33,7 +33,7 @@ Server:
   Version:	17.12.0-ce
 ```
 
-**>> Step 1: 通过Docker镜像，启动OWT环境。**
+**>>> Step 1: 通过Docker镜像，启动OWT环境。**
 
 ```bash
 docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
@@ -44,7 +44,7 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 
 > Note: OWT需要开一系列范围的UDP端口，docker映射大范围端口会有问题，所以我们只指定了50个测试端口，已经在镜像中修改了配置，参考[Port Range](#port-range)。
 
-**Step 2:** 设置OWT的IP信息，设置为Mac的IP地址。也可以自动获取和设置IP，参考[Usage: HostIP](#usage-hostip)。
+**>>> Step 2: 设置OWT的IP信息，设置为Mac的IP地址。也可以自动获取和设置IP，参考[Usage: HostIP](#usage-hostip)。**
 
 ```bash
 # vi dist/webrtc_agent/agent.toml
@@ -56,13 +56,13 @@ network_interfaces = [{name="eth0",replaced_ip_address="192.168.1.4"}]  # defaul
 ip_address = "192.168.1.4" #default: ""
 ```
 
-**Step 3:** 输入命令，初始化OWT和启动服务。
+**>>> Step 3: 输入命令，初始化OWT和启动服务。**
 
 ```bash
 cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 ```
 
-**Step 4:** 大功告成。
+**>>> Step 4: 大功告成。**
 
 打开OWT的默认演示页面，私有证书需要选择`Advanced => Proceed to xxx`：
 
@@ -93,7 +93,7 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 下面我们以MacPro为例，如何使用镜像搭建内网Demo，其他OS将命令替换就可以。
 
-**Step 0: 当然你得有个Docker。**
+**>>> Step 0: 当然你得有个Docker。**
 
 可以从[docker.io](https://www.docker.com/products/docker-desktop)下载一个，安装就好了。
 执行`docker version`，应该可以看到Docker版本：
@@ -106,7 +106,7 @@ Server:
   Version:	17.12.0-ce
 ```
 
-**Step 1: 先获取宿主机的IP，该IP需要在访问的机器上能Ping通。**
+**>>> Step 1: 先获取宿主机的IP，该IP需要在访问的机器上能Ping通。**
 
 ```bash
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'`
@@ -124,7 +124,7 @@ HostIP=`curl -sSL https://raw.githubusercontent.com/ossrs/srs-docker/v3/auto/get
 HostIP="192.168.1.4"
 ```
 
-**Step 2: 设置访问机器的hosts。**
+**>>> Step 2: 设置访问机器的hosts。**
 
 > Remark: 注意是访问机器的hosts，也就是浏览器所在的机器的hosts。
 
@@ -144,7 +144,7 @@ sudo chown root /etc/hosts && echo "Hosts patching done:" && grep docker-host /e
 
 > Remark: 注意脚本中使用了`sudo`修改hosts，所以可能会要求输入密码。
 
-**Step 3: 通过Docker镜像，启动OWT环境。**
+**>>> Step 3: 通过Docker镜像，启动OWT环境。**
 
 ```bash
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
@@ -159,13 +159,13 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 
 > Note: OWT对外提供了信令和媒体服务，所以需要返回可外部访问的IP地址，而Docker相当于内网，所以启动时需要指定`docker-host`这个地址，当然也可以直接修改配置，参考[Docker Host IP](#docker-host-ip)。
 
-**Step 4: 输入命令，初始化OWT和启动服务。**
+**>>> Step 4: 输入命令，初始化OWT和启动服务。**
 
 ```bash
 cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 ```
 
-**Step 5: 大功告成。**
+**>>> Step 5: 大功告成。**
 
 打开OWT的默认演示页面，私有证书需要选择`Advanced => Proceed to docker-host (unsafe)`：
 
@@ -193,7 +193,7 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 > Remark: 下面说明公网IP或域名搭建OWT环境，若在内网或本机使用Docker快速搭建OWT开发环境，参考[Usage:](#usage)。
 
-**Step 1:** 通过Docker镜像，启动OWT环境。
+**>>> Step 1: 通过Docker镜像，启动OWT环境。**
 
 ```bash
 docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
@@ -204,7 +204,7 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 
 > Note: OWT需要开一系列范围的UDP端口，docker映射大范围端口会有问题，所以我们只指定了50个测试端口，已经在镜像中修改了配置，参考[Port Range](#port-range)。
 
-**Step 2:** 配置公网IP或域名，参考[Use Internet Name](#use-internet-name)。
+**>>> Step 2: 配置公网IP或域名，参考[Use Internet Name](#use-internet-name)。**
 
 ```bash
 # vi dist/webrtc_agent/agent.toml
@@ -216,7 +216,7 @@ network_interfaces = [{name="eth0",replaced_ip_address="182.28.12.12"}]  # defau
 ip_address = "182.28.12.12" #default: ""
 ```
 
-**Step 3:** 输入命令，初始化OWT和启动服务。
+**>>> Step 3: 输入命令，初始化OWT和启动服务。**
 
 ```bash
 cd dist && ./bin/init-all.sh && ./bin/start-all.sh
@@ -224,7 +224,7 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 > Remark: 注意会有个提示是否添加MongoDB账号，可以忽略或写No（默认5秒左右就会忽略）。
 
-**Step 4:** 大功告成。
+**>>> Step 4: 大功告成。**
 
 打开OWT的默认演示页面，私有证书需要选择`Advanced => Proceed to xxx`：
 
