@@ -1,6 +1,6 @@
 # OWT-DOCKER
 
-Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server).
+Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server) from Ubuntu18(`ubuntu:bionic`).
 
 * `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3`：内网演示方式[Usage: HostIP](#usage-hostip)，配置好了`docker-host`域名。
 * `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:config`：修改了端口和脚本，参考[Port Range](#port-range)和[Auth Update](#auth-update)。
