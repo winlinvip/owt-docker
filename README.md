@@ -77,7 +77,7 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 下面我们以MacPro为例，如何使用镜像搭建内网Demo，其他OS将命令替换就可以。
 
-**Step 0:** 当然你得有个Docker。
+**Step 0: 当然你得有个Docker。**
 
 可以从[docker.io](https://www.docker.com/products/docker-desktop)下载一个，安装就好了。
 执行`docker version`，应该可以看到Docker版本：
@@ -90,7 +90,7 @@ Server:
   Version:	17.12.0-ce
 ```
 
-**Step 1:** 先获取宿主机的IP，该IP需要在访问的机器上能Ping通。
+**Step 1: 先获取宿主机的IP，该IP需要在访问的机器上能Ping通。**
 
 ```bash
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'`
@@ -108,7 +108,7 @@ HostIP=`curl -sSL https://raw.githubusercontent.com/ossrs/srs-docker/v3/auto/get
 HostIP="192.168.1.4"
 ```
 
-**Step 2:** 设置访问机器的hosts。
+**Step 2: 设置访问机器的hosts。**
 
 > Remark: 注意是访问机器的hosts，也就是浏览器所在的机器的hosts。
 
@@ -128,7 +128,7 @@ sudo chown root /etc/hosts && echo "Hosts patching done:" && grep docker-host /e
 
 > Remark: 注意脚本中使用了`sudo`修改hosts，所以可能会要求输入密码。
 
-**Step 3:** 通过Docker镜像，启动OWT环境。
+**Step 3: 通过Docker镜像，启动OWT环境。**
 
 ```bash
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
@@ -143,7 +143,7 @@ docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
 
 > Note: OWT对外提供了信令和媒体服务，所以需要返回可外部访问的IP地址，而Docker相当于内网，所以启动时需要指定`docker-host`这个地址，当然也可以直接修改配置，参考[Docker Host IP](#docker-host-ip)。
 
-**Step 4:** 输入命令，初始化OWT和启动服务。
+**Step 4: 输入命令，初始化OWT和启动服务。**
 
 ```bash
 cd dist && ./bin/init-all.sh && ./bin/start-all.sh
@@ -151,7 +151,7 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 > Remark: 注意会有个提示是否添加MongoDB账号，`Update RabbitMQ/MongoDB Account?`，可以忽略或写No（默认5秒左右就会忽略）。
 
-**Step 5:** 大功告成。
+**Step 5: 大功告成。**
 
 打开OWT的默认演示页面，私有证书需要选择`Advanced => Proceed to docker-host (unsafe)`：
 
@@ -206,10 +206,15 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 > Remark: 注意会有个提示是否添加MongoDB账号，可以忽略或写No（默认5秒左右就会忽略）。
 
-**Step 4:** 大功告成。由于证书问题，需要打开页面：
+**Step 4:** 大功告成。
 
-* https://182.28.12.12:8080/ 第一次先访问下信令，若使用域名则不需要手动访问。
-* https://182.28.12.12:3004/ OWT演示页面。
+打开OWT的默认演示页面，私有证书需要选择`Advanced => Proceed to xxx`：
+
+* https://182.28.12.12:3004/
+
+由于证书问题，第一次需要在浏览器，先打开OWT信令服务(Portal)页面（后续就不用了）：
+
+* https://182.28.12.12:8080/
 
 > Note: 目前提供OWT 4.3的镜像开发环境，若需要更新代码需要修改Dockerfile，或者参考[Deubg](#debug)重新编译。
 
