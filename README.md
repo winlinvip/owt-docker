@@ -20,7 +20,7 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server) from 
 
 下面我们以MacPro为例，如何使用镜像搭建内网Demo，其他OS将命令替换就可以。
 
-**>>> Step 0: 当然你得有个Docker。**
+**<<< Step 0 >>>: 当然你得有个Docker。**
 
 可以从[docker.io](https://www.docker.com/products/docker-desktop)下载一个，安装就好了。
 执行`docker version`，应该可以看到Docker版本：
