@@ -22,8 +22,8 @@ ENV CLIENT_SAMPLE_PATH=/tmp/git/owt-docker/owt-client-javascript-4.3/dist/sample
 #ENV MFX_HOME=/opt/intel/mediasdk
 
 # This is needed to patch licode
-RUN git config --global user.email "you@example.com" && \
-  git config --global user.name "Your Name"
+#RUN git config --global user.email "you@example.com" && \
+#  git config --global user.name "Your Name"
 
 # @see https://blog.piasy.com/2019/04/14/OWT-Server-Quick-Start/index.html
 ADD owt-server-4.3.tar.gz /tmp/git/owt-docker

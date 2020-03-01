@@ -2,6 +2,12 @@
 
 Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server).
 
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3`：内网演示方式[Usage: HostIP](#usage-hostip)，配置好了`docker-host`域名。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:config`：修改了端口和脚本，参考[Port Range](#port-range)和[Auth Update](#auth-update)。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:pack`：完成了`./scripts/pack.js`步骤，打包好了OWT。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:build`：完成了`./scripts/build.js`步骤，编译好了OWT。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:system`：完成了`./scripts/installDepsUnattended.sh`步骤，安装好了依赖。
+
 ## Usage
 
 下面我们以MacPro为例，如何使用镜像搭建内网Demo，其他OS将命令替换就可以。
@@ -47,8 +53,6 @@ ip_address = "192.168.1.4" #default: ""
 ```bash
 cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 ```
-
-> Remark: 注意会有个提示是否添加MongoDB账号，`Update RabbitMQ/MongoDB Account?`，可以忽略或写No（默认5秒左右就会忽略）。
 
 **Step 4:** 大功告成。
 
@@ -152,8 +156,6 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 ```bash
 cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 ```
-
-> Remark: 注意会有个提示是否添加MongoDB账号，`Update RabbitMQ/MongoDB Account?`，可以忽略或写No（默认5秒左右就会忽略）。
 
 **Step 5: 大功告成。**
 
@@ -288,6 +290,7 @@ OWT会安装很多依赖的库，详细可以参考Dockerfile中安装的依赖�
 ## Issues
 
 1. OWT UDP端口没有复用，导致需要开一系列端口，参考[Port Range](#port-range)。
+1. OWT对外的服务发现，也就是返回给客户端的信令和UDP的IP，是通过配置文件，参考[Docker Host IP](#docker-host-ip)。
 
 ## Port Range
 
@@ -389,4 +392,47 @@ network_interfaces = [{name="eth0",replaced_ip_address="192.168.1.4"}]  # defaul
 ip_address = "192.168.1.4" #default: ""
 ```
 
+## Auth Update
 
+若使用镜像`registry.cn-hangzhou.aliyuncs.com/ossrs/owt:pack`，没有修改UDP端口，也没有修改脚本，启动OWT时会提示：
+
+```bash
+Update RabbitMQ/MongoDB Account? [No/Yes]
+```
+
+会在10秒后默认选择No，我们修改了这个脚本`dist/bin/init-all.sh`：
+
+```bash
+if ${HARDWARE}; then
+  echo "Initializing with hardware msdk"
+  init_hardware
+  #init_auth
+else
+  echo "Initializing..."
+  init_software
+  #init_auth
+fi
+```
+
+这样就默认不会更新MongoDB和RabbitMQ的认证信息，直接启动服务了。
+
+## Keep Docker Fit
+
+如果发现自己的Docker太大，可以先把一些镜像导出，比如：
+
+```bash
+docker save registry.cn-hangzhou.aliyuncs.com/ossrs/owt:pack -o owt-pack.tar
+```
+
+删除Docker文件，可以选择下面任意方式删除Docker的磁盘文件：
+
+* 点`Reset`，然后点`Remove all data`。
+* 点`Disk`，然后点`Open in Finder`，直接删除`Docker.qcow2`，然后重启Docker。
+
+Docker重启后，导入你要的镜像，例如：
+
+```bash
+docker load -i owt-pack.tar
+```
+
+这样就可以将Docker占用的临时磁盘空间彻底瘦身。
