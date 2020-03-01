@@ -4,9 +4,9 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server) from 
 
 * `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3`：内网演示方式[Usage: HostIP](#usage-hostip)，配置好了`docker-host`域名。
 * `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:config`：修改了端口和脚本，参考[Port Range](#port-range)和[Auth Update](#auth-update)。
-* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:pack`：完成了`./scripts/pack.js`步骤，打包好了OWT。
-* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:build`：完成了`./scripts/build.js`步骤，编译好了OWT。
-* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:system`：完成了`./scripts/installDepsUnattended.sh`步骤，安装好了依赖。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:pack`：完成了`pack.js`步骤，打包好了OWT。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:build`：完成了`build.js`步骤，编译好了OWT。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:system`：完成了`installDepsUnattended.sh`步骤，安装好了依赖。
 
 > Note: 总结了一些OWT的重点注意事项，参考[Issues](#issues)。
 
