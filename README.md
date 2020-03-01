@@ -8,6 +8,8 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server).
 * `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:build`：完成了`./scripts/build.js`步骤，编译好了OWT。
 * `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:system`：完成了`./scripts/installDepsUnattended.sh`步骤，安装好了依赖。
 
+> Note: 总结了一些OWT的重点注意事项，参考[Issues](#issues)。
+
 ## Usage
 
 下面我们以MacPro为例，如何使用镜像搭建内网Demo，其他OS将命令替换就可以。
