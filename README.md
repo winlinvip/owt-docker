@@ -22,7 +22,7 @@ Server:
 **Step 1:** 通过Docker镜像，启动OWT环境。
 
 ```bash
-docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:config bash
 ```
 
@@ -132,7 +132,7 @@ sudo chown root /etc/hosts && echo "Hosts patching done:" && grep docker-host /e
 
 ```bash
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
-docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     --add-host=docker-host:$HostIP \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
@@ -178,7 +178,7 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 **Step 1:** 通过Docker镜像，启动OWT环境。
 
 ```bash
-docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:config bash
 ```
 
@@ -240,7 +240,7 @@ git clone https://github.com/open-webrtc-toolkit/owt-server.git
 ``` bash
 cd ~/git/owt-server &&
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
-docker run -it -p 3004:3004 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     --privileged -v `pwd`/source:/tmp/git/owt-docker/owt-server-4.3/source
     --add-host=docker-host:$HostIP \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
