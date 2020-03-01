@@ -9,7 +9,7 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server).
 **Step 0:** 当然你得有个Docker。
 
 可以从[docker.io](https://www.docker.com/products/docker-desktop)下载一个，安装就好了。
-执行`docker version`，可以看到客户端和服务器版本（Docker的服务器也是在你本机的）：
+执行`docker version`，应该可以看到Docker版本：
 
 ```bash
 Mac:owt-docker chengli.ycl$ docker version
@@ -80,7 +80,7 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 **Step 0:** 当然你得有个Docker。
 
 可以从[docker.io](https://www.docker.com/products/docker-desktop)下载一个，安装就好了。
-执行`docker version`，可以看到客户端和服务器版本（Docker的服务器也是在你本机的）：
+执行`docker version`，应该可以看到Docker版本：
 
 ```bash
 Mac:owt-docker chengli.ycl$ docker version
@@ -112,20 +112,16 @@ HostIP="192.168.1.4"
 
 > Remark: 注意是访问机器的hosts，也就是浏览器所在的机器的hosts。
 
-由于宿主机的IP可能会变，所以我们使用域名`docker-host`来访问OWT，需要在访问机器(浏览器所在机器)的`/etc/hosts`中加一条记录，脚本如下：
+由于宿主机的IP可能会变，所以我们使用域名`docker-host`来访问OWT，需要在访问机器(**浏览器所在机器**)的`/etc/hosts`中加一条记录，脚本如下：
 
 ```bash
-HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
-sudo chown `whoami` /etc/hosts &&
+HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` && sudo chown `whoami` /etc/hosts &&
 if [[ `grep -q docker-host /etc/hosts && echo 'YES'` == 'YES' ]]; then
-    sed "s/^.*docker-host/$HostIP docker-host/g" /etc/hosts >/tmp/hosts &&
-    cat /tmp/hosts > /etc/hosts && rm -f /tmp/hosts;
+    sed "s/^.*docker-host/$HostIP docker-host/g" /etc/hosts >/tmp/hosts && cat /tmp/hosts > /etc/hosts && rm -f /tmp/hosts;
 else
-    echo "" >> /etc/hosts && echo "# For OWT docker" >> /etc/hosts &&
-    echo "$HostIP docker-host" >> /etc/hosts;
+    echo "" >> /etc/hosts && echo "# For OWT docker" >> /etc/hosts && echo "$HostIP docker-host" >> /etc/hosts;
 fi &&
-sudo chown root /etc/hosts &&
-echo "Host Patching Done:" && grep docker-host /etc/hosts
+sudo chown root /etc/hosts && echo "Hosts patching done:" && grep docker-host /etc/hosts
 ```
 
 > Remark: 也可以直接在`/etc/hosts`中加一条，比如`192.168.1.4 docker-host`。
