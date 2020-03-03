@@ -458,8 +458,8 @@ Docker信息：
 
 测试数据:
 
-| 模式 | 页面参数 | 页面数目 | CPU | CPU(webrtc) | CPU(video) | CPU(audio) | Memory | Memory(webrtc) | Memory(video) | Memory(audio) | Load |
-| ---  | ---    |  ---   | --- | ---         | ---        | ---        | ---    | ---            | ---           | -----         | ---  |
+| 模式 | 页面参数 | 人数 | CPU | CPU<br/>(webrtc) | CPU<br/>(video) | CPU<br/>(audio) | Memory | Memory<br/>(webrtc) | Memory<br/>(video) | Memory<br/>(audio) | Load |
+| ---  | ---    |  --- | --- | ---              | ---             | ---             | ---    | ---                 | ---                | -----              | ---  |
 | MCU | 无 | 2 | 72% | 28% | 32% | 12% | 238MB | 93MB | 85MB | 56MB | 2.38 |
 | MCU | 无 | 4 | 119% | 44% | 57% | 18% | 267MB | 98MB | 94MB | 75MB | 3.41 |
 | SFU | forward=true | 2 | 35% | 35% | 0% | 0% | 64MB | 64MB | 0MB | 0MB | 2.38 |
