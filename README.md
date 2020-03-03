@@ -495,5 +495,5 @@ OWT默认是MCU+SFU模式，比如打开两个页面：
 
 ## Notes
 
-* [CodeNodejs](CodeNodejs.md) 关于程序结构，Nodejs和C++代码如何组合。
+* [CodeNodejs](CodeNodejs.md) 关于程序结构，调用关系，Nodejs和C++代码如何组合。
 
