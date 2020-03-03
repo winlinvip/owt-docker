@@ -127,8 +127,7 @@ echo "第一次需要先访问信令(Portal)：" && echo "  https://$HostIP:8080
 ```bash
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
 docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
-    --env=DOCKER_HOST:$HostIP \
-    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
+    --env=DOCKER_HOST:$HostIP registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
 
 > Note: Docker使用的版本是[owt-server 4.3](https://github.com/open-webrtc-toolkit/owt-server/releases/tag/v4.3), [owt-client 4.3](https://github.com/open-webrtc-toolkit/owt-client-javascript/releases/tag/v4.3), [IntelMediaSDK 18.4.0](https://github.com/Intel-Media-SDK/MediaSDK/releases/download/intel-mediasdk-18.4.0/MediaStack.tar.gz).
@@ -228,10 +227,10 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 如果需要修改代码后编译：
 
-1. 可以先将Docker代码拷贝出来。
-1. 接着在本地修改OWT代码。
-1. 然后挂载本地目录到Docker。
-1. 最后在Docker编译和运行OWT。
+1. 可以先将Docker代码拷贝出来。不用每次都拷贝，只有第一次需要拷贝。
+1. 接着在本地修改OWT代码。可以用IDE等编辑器编辑代码，比较方便。
+1. 然后挂载本地目录到Docker。挂载后，会以本地目录的文件，代替Docker中的文件。
+1. 最后在Docker编译和运行OWT。如果修改的是JS，可以直接重启服务生效。
 
 **>>> Step 1: 将Docker代码拷贝出来。**
 
@@ -263,9 +262,32 @@ docker cp 75647b1a7b16:/tmp/git/owt-docker/owt-server-4.3 .
 
 **>>> Step 2: 在本地修改OWT代码。**
 
-我们举个栗子，我们修改OWT，支持使用环境变量来指定`portal.ip_address`。
+我们举个栗子，我们修改OWT，支持使用环境变量`DOCKER_HOST`来指定`portal.ip_address`。
 
 > Note: Docker运行时，可以通过`--env DOCKER_HOST='192.168.1.4'`设置环境变量，这样在Docker中就可以通过获取环境变量来获取IP。
+
+修改文件`source/portal/index.js`，参考[118d225f](https://github.com/winlinvip/owt-server/commit/118d225febefd35b7ec06a32791c986d8adade6c)：
+
+```js
+if (config.portal.ip_address.indexOf('$') == 0) {
+    config.portal.ip_address = process.env[config.portal.ip_address.substr(1)];
+    log.info('ENV: config.portal.ip_address=' + config.portal.ip_address);
+}
+```
+
+**>>> Step 3: 挂载本地目录到Docker。**
+
+启动Docker，并将本地目录挂载到Docker：
+
+```bash
+cd ~/git/owt-docker/owt-server-4.3 &&
+HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
+docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+    --env=DOCKER_HOST:$HostIP -v `pwd`:/tmp/git/owt-docker/owt-server-4.3 \
+    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
+```
+
+**>>> Step 4: 在Docker编译和运行OWT。**
 
 其次，可以启动时开启`--privileged`允许gdb调试，将本地的source目录映射到docker：
 
@@ -274,8 +296,7 @@ cd ~/git/owt-server &&
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
 docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     --privileged -v `pwd`/source:/tmp/git/owt-docker/owt-server-4.3/source
-    --env=DOCKER_HOST:$HostIP \
-    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
+    --env=DOCKER_HOST:$HostIP registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
 
 > Remark: 只映射代码source目录，不要覆盖了依赖例如build等目录。
@@ -467,8 +488,25 @@ Docker信息：
 | MCU | forward=true | 2 | 61% | 39% | 22% | 0% | 121MB | 64MB | 57MB | 0MB | 4.81 |
 | MCU | forward=true | 4 | 130% | 91% | 24% | 14% | 230MB | 93MB | 65MB | 72MB | 9.83 |
 
-> Note: 默认是MCU+SFU模式。若在管理后台删除Views后，访问`forward=true`就是SFU模式了；若不删除Views，相当于MCU+SFU模式下访问SFU，还是会启动MCU转码，比SFU模式消耗要高。
+> Note: 默认是MCU+SFU模式，SFU模式参考[SFU Mode](#sfu-mode)。
 
 > Note: 删除Views是指在管理后台，例如 https://192.168.1.4:3300/console/ 的房间设置中，删除Views然后Apply。
 
-> Note: Intel的朋友反馈，在一台8核3.5GHZUbuntu机器(台式机)上，给Docker分配6核4GB内存，跑4个SFU，CPU占用率38%左右(WebRTC)。同样条件，4个MCU页面，CPU使用87%，其中WebRTC占用22%，MCU占用65%(视频46%、音频19%)。
+> Note: Intel的朋友反馈，在一台8核3.5GHZUbuntu机器(台式机)上，给Docker分配4核4GB内存，跑4个SFU，CPU占用率38%左右(WebRTC)。同样条件，4个MCU页面，CPU使用87%，其中WebRTC占用22%，MCU占用65%(视频46%、音频19%)。
+
+## SFU Mode
+
+OWT默认是MCU+SFU模式，比如打开两个页面：
+
+* https://192.168.1.4:3004 两个人各自推送一路流，拉一路流，这路流是MCU合流的。
+* https://192.168.1.4:3004/?forward=true 两个人各自推送一路流，拉独立的两路流，同时OWT还在后台转了一路MCU的流。
+
+其实上面的`forward=true`，并不是仅仅只有SFU模式，只是拉了转发的流。若需要关闭MCU模式，只开启SFU：
+
+1. 打开管理后台：https://192.168.1.4:3300/console
+1. 输入ServiceID和Key，在启动OWT服务时，会打印出来，比如：`sampleServiceId`和`sampleServiceKey`。
+1. 进入后台后，可以看到Room，`View Count`默认是1，选择`Detail`，看到详细的房间配置。
+1. 在Room配置中，Views那一节，点按钮`Remove`，删除views配置，在页面最底下点对勾提交。
+1. 点`Apply`按钮应用房间配置，这时候可以看到`View Count`是0。
+
+这样操作后，再打开页面就只有SFU模式了，不再有video和audio的进程消耗CPU：https://192.168.1.4:3004/?forward=true
