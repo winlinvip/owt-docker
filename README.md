@@ -458,14 +458,14 @@ Docker信息：
 
 测试数据:
 
-| 模式 | 页面参数 | 人数 | CPU | CPU<br/>(webrtc) | CPU<br/>(video) | CPU<br/>(audio) | Memory | Memory<br/>(webrtc) | Memory<br/>(video) | Memory<br/>(audio) | Load |
+| 模式 | 参数 | 人数 | CPU | CPU<br/>(webrtc) | CPU<br/>(video) | CPU<br/>(audio) | Memory | Memory<br/>(webrtc) | Memory<br/>(video) | Memory<br/>(audio) | Load |
 | ---  | ---    |  --- | --- | ---              | ---             | ---             | ---    | ---                 | ---                | -----              | ---  |
 | MCU | 无 | 2 | 72% | 28% | 32% | 12% | 238MB | 93MB | 85MB | 56MB | 2.38 |
 | MCU | 无 | 4 | 119% | 44% | 57% | 18% | 267MB | 98MB | 94MB | 75MB | 3.41 |
 | SFU | forward=true | 2 | 35% | 35% | 0% | 0% | 64MB | 64MB | 0MB | 0MB | 2.38 |
 | SFU | forward=true | 4 | 87% | 87% | 0% | 0% | 95MB | 95MB | 0MB | 0MB | 9.29 |
-| MCU+SFU | forward=true | 2 | 61% | 39% | 22% | 0% | 121MB | 64MB | 57MB | 0MB | 4.81 |
-| MCU+SFU | forward=true | 4 | 130% | 91% | 24% | 14% | 230MB | 93MB | 65MB | 72MB | 9.83 |
+| MCU | forward=true | 2 | 61% | 39% | 22% | 0% | 121MB | 64MB | 57MB | 0MB | 4.81 |
+| MCU | forward=true | 4 | 130% | 91% | 24% | 14% | 230MB | 93MB | 65MB | 72MB | 9.83 |
 
 > Note: 默认是MCU+SFU模式。若在管理后台删除Views后，访问`forward=true`就是SFU模式了；若不删除Views，相当于MCU+SFU模式下访问SFU，还是会启动MCU转码，比SFU模式消耗要高。
 
