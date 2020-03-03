@@ -70,7 +70,7 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 由于证书问题，第一次需要在浏览器，先打开OWT信令服务(Portal)页面（后续就不用了）：
 
-* https://192.168.1.4:8080/
+* [https://192.168.1.4:8080/socket.io/?EIO=3&transport=polling&t=N2UmsIn](https://192.168.1.4:8080/socket.io/?EIO=3&transport=polling&t=N2UmsIn)
 
 访问管理后台，注意启动服务时有个sampleServiceId和sampleServiceKey，打开页面会要求输入这个信息：
 
@@ -109,47 +109,25 @@ Server:
 **>>> Step 1: 先获取宿主机的IP，该IP需要在访问的机器上能Ping通。**
 
 ```bash
-HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'`
-```
-
-上面是Mac的脚本，Linux上需要更换，也可以下载脚本获取：
-
-```bash
-HostIP=`curl -sSL https://raw.githubusercontent.com/ossrs/srs-docker/v3/auto/get_host_ip.sh | bash`
+HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
+echo "" && echo "" && echo "" && echo "OWT演示页面:" && echo "  https://$HostIP:3004/" &&
+echo "第一次需要先访问信令(Portal)：" && echo "  https://$HostIP:8080/socket.io/?EIO=3&transport=polling&t=N2UmsIn"
 ```
 
 或者直接设置为自己的IP：
 
 ```bash
-HostIP="192.168.1.4"
+HostIP="192.168.1.4" &&
+echo "" && echo "" && echo "" && echo "OWT演示页面:" && echo "  https://$HostIP:3004/" &&
+echo "第一次需要先访问信令(Portal)：" && echo "  https://$HostIP:8080/socket.io/?EIO=3&transport=polling&t=N2UmsIn"
 ```
 
-**>>> Step 2: 设置访问机器的hosts。**
-
-> Remark: 注意是访问机器的hosts，也就是浏览器所在的机器的hosts。
-
-由于宿主机的IP可能会变，所以我们使用域名`docker-host`来访问OWT，需要在访问机器(**浏览器所在机器**)的`/etc/hosts`中加一条记录，脚本如下：
-
-```bash
-HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` && sudo chown `whoami` /etc/hosts &&
-if [[ `grep -q docker-host /etc/hosts && echo 'YES'` == 'YES' ]]; then
-    sed "s/^.*docker-host/$HostIP docker-host/g" /etc/hosts >/tmp/hosts && cat /tmp/hosts > /etc/hosts && rm -f /tmp/hosts;
-else
-    echo "" >> /etc/hosts && echo "# For OWT docker" >> /etc/hosts && echo "$HostIP docker-host" >> /etc/hosts;
-fi &&
-sudo chown root /etc/hosts && echo "Hosts patching done:" && grep docker-host /etc/hosts
-```
-
-> Remark: 也可以直接在`/etc/hosts`中加一条，比如`192.168.1.4 docker-host`。
-
-> Remark: 注意脚本中使用了`sudo`修改hosts，所以可能会要求输入密码。
-
-**>>> Step 3: 通过Docker镜像，启动OWT环境。**
+**>>> Step 2: 通过Docker镜像，启动OWT环境。**
 
 ```bash
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
 docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
-    --add-host=docker-host:$HostIP \
+    --env=DOCKER_HOST:$HostIP \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
 
@@ -157,27 +135,27 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 
 > Note: OWT需要开一系列范围的UDP端口，docker映射大范围端口会有问题，所以我们只指定了50个测试端口，已经在镜像中修改了配置，参考[Port Range](#port-range)。
 
-> Note: OWT对外提供了信令和媒体服务，所以需要返回可外部访问的IP地址，而Docker相当于内网，所以启动时需要指定`docker-host`这个地址，当然也可以直接修改配置，参考[Docker Host IP](#docker-host-ip)。
+> Note: OWT对外提供了信令和媒体服务，所以需要返回可外部访问的IP地址，我们通过环境变量传递给Docker，参考[Docker Host IP](#docker-host-ip)。
 
-**>>> Step 4: 输入命令，初始化OWT和启动服务。**
+**>>> Step 3: 输入命令，初始化OWT和启动服务。**
 
 ```bash
 cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 ```
 
-**>>> Step 5: 大功告成。**
+**>>> Step 4: 大功告成。**
 
-打开OWT的默认演示页面，私有证书需要选择`Advanced => Proceed to docker-host (unsafe)`：
+打开OWT的默认演示页面，私有证书需要选择`Advanced => Proceed to 192.168.1.4 (unsafe)`：
 
-* https://docker-host:3004/
+* https://192.168.1.4:3004/
 
 由于证书问题，第一次需要在浏览器，先打开OWT信令服务(Portal)页面（后续就不用了）：
 
-* https://docker-host:8080/
+* [https://192.168.1.4:8080/socket.io/?EIO=3&transport=polling&t=N2UmsIn](https://192.168.1.4:8080/socket.io/?EIO=3&transport=polling&t=N2UmsIn)
 
 访问管理后台，注意启动服务时有个sampleServiceId和sampleServiceKey，打开页面会要求输入这个信息：
 
-* https://docker-host:3300/console
+* https://192.168.1.4:3300/console
 
 > Note: 我们使用域名来访问OWT服务，这样宿主机IP变更后，只需要执行脚本就可以，参考[Docker Host IP](#docker-host-ip)。
 
@@ -232,7 +210,7 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 
 由于证书问题，第一次需要在浏览器，先打开OWT信令服务(Portal)页面（后续就不用了）：
 
-* https://182.28.12.12:8080/
+* [https://182.28.12.12:8080/socket.io/?EIO=3&transport=polling&t=N2UmsIn](https://182.28.12.12:8080/socket.io/?EIO=3&transport=polling&t=N2UmsIn)
 
 访问管理后台，注意启动服务时有个sampleServiceId和sampleServiceKey，打开页面会要求输入这个信息：
 
@@ -246,16 +224,48 @@ cd dist && ./bin/init-all.sh && ./bin/start-all.sh
 * 在内网用镜像搭建OWT，使用脚本自动获取IP，自动修改OWT配置文件中的IP，参考[Usage: HostIP](#usage-hostip)。
 * 有公网IP或域名时，用镜像搭建OWT服务，参考[Usage: Internet](#usage-internet)。
 
-## Update
+## Develop && Debug
 
-如果需要修改代码后编译，可以将本地的代码映射到docker。
+如果需要修改代码后编译：
 
-首先，假设你的代码是在`~/git/owt-server`这个目录：
+1. 可以先将Docker代码拷贝出来。
+1. 接着在本地修改OWT代码。
+1. 然后挂载本地目录到Docker。
+1. 最后在Docker编译和运行OWT。
+
+**>>> Step 1: 将Docker代码拷贝出来。**
+
+首先，需要先运行Docker：
 
 ```bash
-mkdir -p ~/git && cd ~/git &&
-git clone https://github.com/open-webrtc-toolkit/owt-server.git
+docker run -it registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
+
+然后，可以用`docker ps`，获取运行的容器ID，比如是`75647b1a7b16`：
+
+```bash
+Mac:owt-docker chengli.ycl$ docker ps
+CONTAINER ID        IMAGE
+75647b1a7b16        registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3
+```
+
+接着，从运行的容器`75647b1a7b16`中拷贝OWT代码：
+
+```bash
+mkdir -p ~/git/owt-docker && cd ~/git/owt-docker &&
+docker cp 75647b1a7b16:/tmp/git/owt-docker/owt-client-javascript-4.3 .
+docker cp 75647b1a7b16:/tmp/git/owt-docker/owt-server-4.3 .
+```
+
+这样，我们就有了OWT 4.3的代码，接下来就可以在本地修改代码了。
+
+> Note: 当然，也可以直接从OWT下载最新代码，映射到Docker后编译执行，注意只映射source目录到Docker。
+
+**>>> Step 2: 在本地修改OWT代码。**
+
+我们举个栗子，我们修改OWT，支持使用环境变量来指定`portal.ip_address`。
+
+> Note: Docker运行时，可以通过`--env DOCKER_HOST='192.168.1.4'`设置环境变量，这样在Docker中就可以通过获取环境变量来获取IP。
 
 其次，可以启动时开启`--privileged`允许gdb调试，将本地的source目录映射到docker：
 
@@ -264,7 +274,7 @@ cd ~/git/owt-server &&
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
 docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     --privileged -v `pwd`/source:/tmp/git/owt-docker/owt-server-4.3/source
-    --add-host=docker-host:$HostIP \
+    --env=DOCKER_HOST:$HostIP \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
 
@@ -338,11 +348,11 @@ Mac:owt-docker chengli.ycl$ ifconfig en0 inet|grep inet
 * `dist/webrtc_agent/agent.toml`，修改`[webrtc]`中的`network_interfaces`，是媒体流的服务地址。
 * `dist/portal/portal.toml`，修改`[portal]`中的`ip_address`，是信令的服务地址。
 
-Docker提供了更好的办法，可以将宿主机的IP(192.168.1.4)通过`--add-host`传给OWT，映射成一个域名`docker-host`：
+Docker提供了更好的办法，可以将宿主机的IP(192.168.1.4)通过`--env`传给OWT，通过读取环境变量获取IP：
 
 ```bash
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
-docker run -it --add-host=docker-host:$HostIP \
+docker run -it --env=DOCKER_HOST:$HostIP \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
 
@@ -351,40 +361,25 @@ docker run -it --add-host=docker-host:$HostIP \
 这样在Docker中就可以知道宿主机的IP地址了（或者公网IP也可以）：
 
 ```bash
-root@d5a5bc41169e:/tmp/git/owt-docker/owt-server-4.3# ping docker-host
-PING docker-host (192.168.1.4): 56 data bytes
-64 bytes from 192.168.1.4: icmp_seq=0 ttl=37 time=1.002 ms
-64 bytes from 192.168.1.4: icmp_seq=1 ttl=37 time=5.884 ms
+root@d5a5bc41169e:/tmp/git/owt-docker/owt-server-4.3# echo $DOCKER_HOST
+192.168.1.4
 ```
 
-我们就可以将OWT对外暴露的服务，修改为域名`docker-host`，避免每次启动都要改配置：
+我们就可以将OWT对外暴露的服务，修改为环境变量`$DOCKER_HOST`，避免每次启动都要改配置：
 
 ```bash
 # vi dist/webrtc_agent/agent.toml
 [webrtc]
-network_interfaces = [{name="eth0",replaced_ip_address="docker-host"}]  # default: []
+network_interfaces = [{name="eth0",replaced_ip_address="$DOCKER_HOST"}]  # default: []
 
 # vi dist/portal/portal.toml
 [portal]
-ip_address = "docker-host" #default: ""
+ip_address = "$DOCKER_HOST" #default: ""
 ```
 
-由于这个地址会被返回给浏览器，所以需要我们修改客户端所在机器的host文件：
+启动OWT时，会被替换成IP地址。
 
-```bash
-HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
-sudo chown `whoami` /etc/hosts &&
-if [[ `grep -q docker-host /etc/hosts && echo 'YES'` == 'YES' ]]; then
-    sed "s/^.*docker-host/$HostIP docker-host/g" /etc/hosts >/tmp/hosts &&
-    cat /tmp/hosts > /etc/hosts && rm -f /tmp/hosts;
-else
-    echo "" >> /etc/hosts &&
-    echo "# For OWT docker" >> /etc/hosts &&
-    echo "$HostIP docker-host" >> /etc/hosts;
-fi &&
-sudo chown root /etc/hosts &&
-echo "Host Patching Done:" && grep docker-host /etc/hosts
-```
+> Remark: 注意我们在Docker中修改了OWT，提交了PR参考[]()
 
 <a name="use-internet-name"></a>
 
