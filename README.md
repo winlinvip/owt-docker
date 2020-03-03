@@ -275,6 +275,13 @@ if (config.portal.ip_address.indexOf('$') == 0) {
 }
 ```
 
+修改文件`source/portal/portal.toml`，将信令Portal的`ip_address`引用环境变量：
+
+```bash
+[portal]
+ip_address = "$DOCKER_HOST" #default: ""
+```
+
 **>>> Step 3: 挂载本地目录到Docker。**
 
 启动Docker，并将本地目录挂载到Docker：
@@ -289,23 +296,23 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 
 **>>> Step 4: 在Docker编译和运行OWT。**
 
-其次，可以启动时开启`--privileged`允许gdb调试，将本地的source目录映射到docker：
-
-``` bash
-cd ~/git/owt-server &&
-HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
-docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
-    --privileged -v `pwd`/source:/tmp/git/owt-docker/owt-server-4.3/source
-    --env=DOCKER_HOST:$HostIP registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
-```
-
-> Remark: 只映射代码source目录，不要覆盖了依赖例如build等目录。
-
-最后，修改本地的代码后，在远程编译和运行owt：
+这个例子中，我们只修改了JS文件，所以直接打包就可以：
 
 ```bash
-TBD
+./scripts/pack.js -t all --install-module --sample-path $CLIENT_SAMPLE_PATH
 ```
+
+可以看到，`dist/portal/portal.toml`和`dist/portal/index.js`这两个文件都更新了。
+
+启动服务后，就可以看到修改生效了：
+
+```bash
+cd dist && ./bin/init-all.sh && ./bin/start-all.sh
+```
+
+打开页面：
+
+* https://192.168.1.4:3004/
 
 ## Dependencies
 
