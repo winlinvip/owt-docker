@@ -493,3 +493,7 @@ OWT默认是MCU+SFU模式，比如打开两个页面：
 
 这样操作后，再打开页面就只有SFU模式了，不再有video和audio的进程消耗CPU：https://192.168.1.4:3004/?forward=true
 
+## Notes
+
+* [CodeNodejs](CodeNodejs.md) 关于程序结构，Nodejs和C++代码如何组合。
+
