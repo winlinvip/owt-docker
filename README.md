@@ -59,7 +59,7 @@ ip_address = "192.168.1.4" #default: ""
 **>>> Step 3: 输入命令，初始化OWT和启动服务。**
 
 ```bash
-cd dist && ./bin/init-all.sh && ./bin/start-all.sh
+(cd dist && ./bin/init-all.sh && ./bin/start-all.sh)
 ```
 
 **>>> Step 4: 大功告成。**
@@ -139,7 +139,7 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 **>>> Step 3: 输入命令，初始化OWT和启动服务。**
 
 ```bash
-cd dist && ./bin/init-all.sh && ./bin/start-all.sh
+(cd dist && ./bin/init-all.sh && ./bin/start-all.sh)
 ```
 
 **>>> Step 4: 大功告成。**
@@ -196,7 +196,7 @@ ip_address = "182.28.12.12" #default: ""
 **>>> Step 3: 输入命令，初始化OWT和启动服务。**
 
 ```bash
-cd dist && ./bin/init-all.sh && ./bin/start-all.sh
+(cd dist && ./bin/init-all.sh && ./bin/start-all.sh)
 ```
 
 > Remark: 注意会有个提示是否添加MongoDB账号，可以忽略或写No（默认5秒左右就会忽略）。
@@ -307,12 +307,8 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 启动服务后，就可以看到修改生效了：
 
 ```bash
-cd dist && ./bin/init-all.sh && ./bin/start-all.sh
+(cd dist && ./bin/init-all.sh && ./bin/start-all.sh)
 ```
-
-打开页面：
-
-* https://192.168.1.4:3004/
 
 ## Dependencies
 
@@ -447,27 +443,6 @@ fi
 
 这样就默认不会更新MongoDB和RabbitMQ的认证信息，直接启动服务了。
 
-## Keep Docker Fit
-
-如果发现自己的Docker太大，可以先把一些镜像导出，比如：
-
-```bash
-docker save registry.cn-hangzhou.aliyuncs.com/ossrs/owt:pack -o owt-pack.tar
-```
-
-删除Docker文件，可以选择下面任意方式删除Docker的磁盘文件：
-
-* 点`Reset`，然后点`Remove all data`。
-* 点`Disk`，然后点`Open in Finder`，直接删除`Docker.qcow2`，然后重启Docker。
-
-Docker重启后，导入你要的镜像，例如：
-
-```bash
-docker load -i owt-pack.tar
-```
-
-这样就可以将Docker占用的临时磁盘空间彻底瘦身。
-
 ## Performance
 
 MacPro信息：
@@ -517,3 +492,4 @@ OWT默认是MCU+SFU模式，比如打开两个页面：
 1. 点`Apply`按钮应用房间配置，这时候可以看到`View Count`是0。
 
 这样操作后，再打开页面就只有SFU模式了，不再有video和audio的进程消耗CPU：https://192.168.1.4:3004/?forward=true
+
