@@ -439,3 +439,36 @@ docker load -i owt-pack.tar
 ```
 
 这样就可以将Docker占用的临时磁盘空间彻底瘦身。
+
+## Performance
+
+MacPro信息：
+
+* macOS Mojave
+* Version 10.14.6 (18G3020)
+* MacBook Pro (Retina, 15-inch, Mid 2015)
+* Processor: 2.2 GHz Intel Core i7
+* Memory: 16 GB 1600 MHz DDR3
+
+Docker信息：
+
+* Docker Desktop 2.2.0.3(42716)
+* Engine: 19.03.5
+* Resources: CPUs 4, Memory 4GB, Swap 1GB
+
+测试数据:
+
+| 模式 | 页面参数 | 页面数目 | CPU | CPU(webrtc) | CPU(video) | CPU(audio) | Memory | Memory(webrtc) | Memory(video) | Memory(audio) | Load |
+| ---  | ---    |  ---   | --- | ---         | ---        | ---        | ---    | ---            | ---           | -----         | ---  |
+| MCU | 无 | 2 | 72% | 28% | 32% | 12% | 238MB | 93MB | 85MB | 56MB | 2.38 |
+| MCU | 无 | 4 | 119% | 44% | 57% | 18% | 267MB | 98MB | 94MB | 75MB | 3.41 |
+| SFU | forward=true | 2 | 35% | 35% | 0% | 0% | 64MB | 64MB | 0MB | 0MB | 2.38 |
+| SFU | forward=true | 4 | 87% | 87% | 0% | 0% | 95MB | 95MB | 0MB | 0MB | 9.29 |
+| MCU+SFU | forward=true | 2 | 61% | 39% | 22% | 0% | 121MB | 64MB | 57MB | 0MB | 4.81 |
+| MCU+SFU | forward=true | 4 | 130% | 91% | 24% | 14% | 230MB | 93MB | 65MB | 72MB | 9.83 |
+
+> Note: 默认是MCU+SFU模式。若在管理后台删除Views后，访问`forward=true`就是SFU模式了；若不删除Views，相当于MCU+SFU模式下访问SFU，还是会启动MCU转码，比SFU模式消耗要高。
+
+> Note: 删除Views是指在管理后台，例如 https://192.168.1.4:3300/console/ 的房间设置中，删除Views然后Apply。
+
+> Note: Intel的朋友反馈，在一台8核Ubuntu机器(台式机)上，给Docker分配6核4GB内存，跑4个SFU，CPU占用率38%左右(WebRTC)。同样条件，4个MCU页面，CPU使用87%，其中WebRTC占用22%，MCU占用65%(视频46%、音频19%)。
