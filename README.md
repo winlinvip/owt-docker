@@ -459,7 +459,7 @@ Docker信息：
 * Engine: 19.03.5
 * Resources: CPUs 4, Memory 4GB, Swap 1GB
 
-测试数据:
+下面是不同人数和模式的测试数据:
 
 | 模式 | 参数 | 人数 | CPU | CPU<br/>(webrtc) | CPU<br/>(video) | CPU<br/>(audio) | Memory | Memory<br/>(webrtc) | Memory<br/>(video) | Memory<br/>(audio) | Load |
 | ---  | ---    |  --- | --- | ---              | ---             | ---             | ---    | ---                 | ---                | -----              | ---  |
@@ -476,12 +476,39 @@ Docker信息：
 
 > Note: Intel的朋友反馈，在一台8核3.5GHZUbuntu机器(台式机)上，给Docker分配4核4GB内存，跑4个SFU，CPU占用率38%左右(WebRTC)。同样条件，4个MCU页面，CPU使用87%，其中WebRTC占用22%，MCU占用65%(视频46%、音频19%)。
 
-下面是WebRTC这个agent的性能指标：
+下面是WebRTC这个Agent的性能指标：
 
-| 模式 | 人数 | CPU | Memory | Threads |
-| --- | --- | ----- | ----- | ---     |
-| MCU | 0 |  0% | 47MB | 36 |
-| MCU | 1 |
+| 模式 | 人数 | CPU | Memory | Threads | 线程增长 |
+| --- | --- | ----- | ----- | ---     | --- |
+| MCU | 0 |  0% | 47MB | 36 | - |
+| MCU | 1 | 11% | 58MB | 46 | - |
+| MCU | 2 | 24% | 62MB | 55 | 19% |
+| MCU | 3 | 37% | 67MB | 64 | 16% |
+| MCU | 4 | 62% | 72MB | 73 | 14% |
+
+> Note: 可以看到，由于直接使用了WebRTC，使用的线程数和人数正关联，限制了能支持的并发数目。
+
+下面是Video这个Agent的性能指标：
+
+| 模式 | 人数 | CPU | Memory | Threads | 线程增长 |
+| --- | --- | ----- | ----- | ---     | --- |
+| MCU | 0 |  0% | 46MB | 10 | - |
+| MCU | 1 | 18% | 66MB | 20 | - |
+| MCU | 2 | 22% | 71MB | 21 | 5% |
+| MCU | 3 | 33% | 78MB | 22 | 4% |
+| MCU | 4 | 74% | 83MB | 23 | 4% |
+
+下面是Audio这个Agent的性能指标：
+
+| 模式 | 人数 | CPU | Memory | Threads | 线程增长 |
+| --- | --- | ----- | ----- | ---     | --- |
+| MCU | 0 | 0.3% | 43MB | 10 | - |
+| MCU | 1 | 4.7% | 47MB | 16 | - |
+| MCU | 2 | 9.3% | 53MB | 20 | 25% |
+| MCU | 3 | 13% | 63MB | 24 | 20% |
+| MCU | 4 | 26% | 73MB | 28 | 16% |
+
+> Note: Video和Audio都是编解码运算，是CPU密集型，线程随人数正向增长符合预期。
 
 ## SFU Mode
 
