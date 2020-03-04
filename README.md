@@ -127,7 +127,7 @@ echo "第一次需要先访问信令(Portal)：" && echo "  https://$HostIP:8080
 ```bash
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
 docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
-    --env=DOCKER_HOST:$HostIP registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
+    --env DOCKER_HOST=$HostIP registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
 
 > Note: Docker使用的版本是[owt-server 4.3](https://github.com/open-webrtc-toolkit/owt-server/releases/tag/v4.3), [owt-client 4.3](https://github.com/open-webrtc-toolkit/owt-client-javascript/releases/tag/v4.3), [IntelMediaSDK 18.4.0](https://github.com/Intel-Media-SDK/MediaSDK/releases/download/intel-mediasdk-18.4.0/MediaStack.tar.gz).
@@ -290,7 +290,7 @@ ip_address = "$DOCKER_HOST" #default: ""
 cd ~/git/owt-docker/owt-server-4.3 &&
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
 docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
-    --env=DOCKER_HOST:$HostIP -v `pwd`:/tmp/git/owt-docker/owt-server-4.3 \
+    --env DOCKER_HOST=$HostIP -v `pwd`:/tmp/git/owt-docker/owt-server-4.3 \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
 
@@ -376,7 +376,7 @@ Docker提供了更好的办法，可以将宿主机的IP(192.168.1.4)通过`--en
 
 ```bash
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
-docker run -it --env=DOCKER_HOST:$HostIP \
+docker run -it --env DOCKER_HOST=$HostIP \
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
 ```
 
@@ -475,6 +475,13 @@ Docker信息：
 > Note: 删除Views是指在管理后台，例如 https://192.168.1.4:3300/console/ 的房间设置中，删除Views然后Apply。
 
 > Note: Intel的朋友反馈，在一台8核3.5GHZUbuntu机器(台式机)上，给Docker分配4核4GB内存，跑4个SFU，CPU占用率38%左右(WebRTC)。同样条件，4个MCU页面，CPU使用87%，其中WebRTC占用22%，MCU占用65%(视频46%、音频19%)。
+
+下面是WebRTC这个agent的性能指标：
+
+| 模式 | 人数 | CPU | Memory | Threads |
+| --- | --- | ----- | ----- | ---     |
+| MCU | 0 |  0% | 47MB | 36 |
+| MCU | 1 |
 
 ## SFU Mode
 
