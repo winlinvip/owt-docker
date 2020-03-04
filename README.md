@@ -14,7 +14,14 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server) from 
 * 在内网使用镜像快速搭建OWT，需要修改IP，参考[Usage](#usage)。
 * 有公网IP或域名时，用镜像搭建OWT服务，参考[Usage: Internet](#usage-internet)。
 
-> Note: 总结了一些OWT的重点注意事项，参考[Issues](#issues)。性能测试数据参考[Performance](#performance)。修改和编译代码参考[Develop](#develop)。调试WebRTC的C++代码参考[Debug](#debug)。
+下面是本文涉及的重点：
+
+* OWT开发环境搭建，本机快速部署，不用改IP，参考[Usage: HostIP](#usage-hostip)。
+* OWT本机修改，可修改C++代码，在Docker中编译和运行，参考[Develop](#develop)。
+* OWT调试js和WebRTC的C++代码，参考[Debug](#debug)。
+* OWT几组性能数据，WebRTC性能不高，参考[Performance](#performance)。
+* OWT存在的一些问题，参考[Issues](#issues)。
+* OWT的程序结构，使用Nodejs调用C++代码，参考[CodeNodejs](CodeNodejs.md)。
 
 ## Usage
 
@@ -409,6 +416,8 @@ Thread 1 "node" hit Breakpoint 1, WebRtcConnection::addRemoteCandidate (info=...
 ```
 
 GDB是非常强大的调试工具，详细命令参考[Debugging with GDB](http://sourceware.org/gdb/current/onlinedocs/gdb/)。
+
+> Note: 也可以使用`node inspect xxx.js`调试js程序。
 
 > Remark: OWT使用Nodejs的NAN调用C++代码，调试原理参考[CodeNodejs](CodeNodejs.md#nodejs-nan-debug)，代码结构参考[CodeNodejs](CodeNodejs.md#nodejs-nan-owt)。
 
