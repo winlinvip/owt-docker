@@ -14,7 +14,7 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server) from 
 * 在内网使用镜像快速搭建OWT，需要修改IP，参考[Usage](#usage)。
 * 有公网IP或域名时，用镜像搭建OWT服务，参考[Usage: Internet](#usage-internet)。
 
-> Note: 总结了一些OWT的重点注意事项，参考[Issues](#issues)。性能测试数据参考[Performance](#performance)。修改和编译代码参考[Develop](#develop)。
+> Note: 总结了一些OWT的重点注意事项，参考[Issues](#issues)。性能测试数据参考[Performance](#performance)。修改和编译代码参考[Develop](#develop)。调试WebRTC的C++代码参考[Debug](#debug)。
 
 ## Usage
 
@@ -320,7 +320,95 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 
 ## Debug
 
-我们举个例子，调试OWT中的WebRTC的代码。
+我们举个例子，调试OWT中的WebRTC Agent的代码。
+
+**>>> Step 0: 一定要使用调试版本的镜像。**
+
+为了方便调试，请使用调试镜像`registry.cn-hangzhou.aliyuncs.com/ossrs/owt:debug`，我们修改了几个地方：
+
+* 设置WebRTC Agent的进程数目为1，可以直接调试这个进程，不然多个进程每个进程都要设置断点，会比较麻烦（也可以调试）。
+* 设置`nodeManager`的超时时间为3000秒(即50分钟)，默认是3秒，所以很容易在设置断点或单步运行时进程被杀掉，导致调试失败。
+* 日志级别全部设置为`DEBUG`，会显示更多的详细的日志，文件为`log4js_configuration.json`。
+
+推荐使用debug镜像启动，若不使用debug镜像，你也可以手动修改你的OWT，改动如下：
+
+```bash
+# vi dist/webrtc_agent/agent.toml +3
+[agent]
+maxProcesses = 1 #default: 13
+prerunProcesses = 1 #default: 2
+
+# vi dist/webrtc_agent/log4js_configuration.json +13
+"ClusterWorker": "DEBUG",
+"LoadCollector": "DEBUG",
+"AmqpClient": "DEBUG",
+"WorkingJS": "DEBUG",
+"NodeManager": "DEBUG",
+"WebrtcNode": "DEBUG",
+"WrtcConnection": "DEBUG",
+"Connection": "DEBUG",
+"Sdp": "DEBUG",
+"WorkingAgent": "DEBUG",
+"Connections": "DEBUG",
+"InternalConnectionFactory": "DEBUG"
+
+# vi dist/webrtc_agent/nodeManager.js +125
+child.check_alive_interval = setInterval(function() {
+}, 3000000);
+```
+
+**>>> Step 1: 启动debug镜像。**
+
+启动Docker，添加gdb需要的参数`--privileged`：
+
+```bash
+HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
+docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+    --privileged --env DOCKER_HOST=$HostIP \
+    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:debug bash
+```
+
+> Note: 若需要修改代码和映射目录，可以按照上一步修改本地代码，或者从debug镜像将代码拷贝出来，参考[Develop](#develop)。
+
+启动OWT服务：
+
+```bash
+(cd dist && ./bin/init-all.sh && ./bin/start-all.sh)
+```
+
+**>>> Step 2: 启动GDB调试WebRTC Agent进程。**
+
+启动GDB调试，并Attach调试WebRTC Agent的进程：
+
+```bash
+gdb --pid `ps aux|grep webrtc|grep workingNode|awk '{print $2}'`
+```
+
+然后设置断点，比如可以设置在函数上，或者在文件的某一行：
+
+```bash
+b WebRtcConnection.cc:346
+c
+```
+
+> Note: 设置断点后，执行`continue`或者`c`，继续跑程序。
+
+**>>> Step 3: 打开页面，命中断点。**
+
+打开页面，就会进入断点了：
+
+```bash
+Thread 1 "node" hit Breakpoint 1, WebRtcConnection::addRemoteCandidate (info=...) at ../WebRtcConnection.cc:313
+313	  WebRtcConnection* obj = Nan::ObjectWrap::Unwrap<WebRtcConnection>(info.Holder());
+(gdb) bt
+#0  0x00007fe00d7affac in WebRtcConnection::addRemoteCandidate(Nan::FunctionCallbackInfo<v8::Value> const&) (info=...) at ../WebRtcConnection.cc:313
+#1  0x00007fe00d7a9243 in Nan::imp::FunctionCallbackWrapper(v8::FunctionCallbackInfo<v8::Value> const&) (info=...)
+    at ../../../../../node_modules/nan/nan_callbacks_12_inl.h:179
+#2  0x000055c7c8302d0f in v8::internal::FunctionCallbackArguments::Call(void (*)(v8::FunctionCallbackInfo<v8::Value> const&)) ()
+#3  0x000055c7c836bb62 in  ()
+```
+
+GDB是非常强大的调试工具，详细命令参考[Debugging with GDB](http://sourceware.org/gdb/current/onlinedocs/gdb/)。
 
 > Remark: OWT使用Nodejs的NAN调用C++代码，调试原理参考[CodeNodejs](CodeNodejs.md#nodejs-nan-debug)，代码结构参考[CodeNodejs](CodeNodejs.md#nodejs-nan-owt)。
 
