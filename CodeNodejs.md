@@ -159,7 +159,7 @@ var rpcAPI = (controller.rpcAPI || controller);
 
 这里很多日志是debug级别的，我们可以修改日志的级别，打印出这些日志：
 
-```bash
+```
 # vi dist/webrtc_agent/log4js_configuration.json
 {
   "levels": {
@@ -174,7 +174,7 @@ tail -f dist/logs/webrtc-*
 
 比如，一个人入会后(默认推流和拉流)，可以看到整个信令的处理，以及交互的过程：
 
-```bash
+```
 2020-03-03 12:58:56.013  - DEBUG: WebrtcNode - publish, connectionId: 908444533627401600 connectionType: webrtc options: { controller: 'conference-a3bde0d1635ea2a57287@172.17.0.2_1',
   media:
    { audio: { source: 'mic' },
@@ -224,13 +224,13 @@ tail -f dist/logs/webrtc-*
 
 这个js如何调用webrtc的c++代码呢，在这里：
 
-```js
+```
 var addon = require('../webrtcLib/build/Release/webrtc');
 ```
 
 这个文件有41MB，就是整个WebRTC打包成Nodejs能调用的库：
 
-```bash
+```
 root@8d2509d377de:/tmp/git/owt-docker/owt-server-4.3# ls -lh dist/webrtc_agent/webrtcLib/build/Release/webrtc.node
 -rwxr-xr-x 1 root root 41M Mar  3 09:30 dist/webrtc_agent/webrtcLib/build/Release/webrtc.node
 
@@ -266,5 +266,168 @@ root@8d2509d377de:/tmp/git/owt-docker/owt-server-4.3/dist/webrtc_agent# ldd webr
 	libblkid.so.1 => /lib/x86_64-linux-gnu/libblkid.so.1 (0x00007f7115a71000)
 ```
 
-为了了解Nodejs如何使用C++代码，我们根据[Nodejs Addons](https://nodejs.org/api/addons.html)写了个例子[nodejs-cpp](nodejs-cpp)：
+## Nodejs NAN
+
+上面看到，webrtc_agent是通过`webrtc_agent/webrtc/index.js`调用了C++代码：
+
+```
+var addon = require('../webrtcLib/build/Release/webrtc');
+```
+
+为了了解Nodejs如何使用C++代码，我们根据[Nodejs Addons](https://nodejs.org/api/addons.html)写了个例子[nodejs-cpp](nodejs-cpp)，
+执行下面的命令运行它：
+
+```bash
+node-gyp --debug configure build && node index.js
+```
+
+> Note: 我们加了`--debug`参数，生成可以调试版本的NAN。
+
+可以看到它的目录结构和webrtcLib的非常像：
+
+```bash
+root@d247e5015561:/tmp/git/owt-docker/nodejs-cpp# tree -h
+.
+|-- [  97]  binding.gyp
+|-- [ 224]  build
+|   |-- [ 160]  Debug
+|   |   |-- [135K]  addon.node
+|   |   `-- [ 128]  obj.target
+|   |       |-- [  96]  addon
+|   |       |   `-- [198K]  hello.o
+|   |       `-- [135K]  addon.node
+|   |-- [ 12K]  Makefile
+|   |-- [3.6K]  addon.target.mk
+|   |-- [ 113]  binding.Makefile
+|   `-- [1.8K]  config.gypi
+|-- [ 631]  hello.cc
+`-- [ 142]  index.js
+```
+
+Nodejs调用C++的步骤：
+
+1. `hello.cc`，是被调用的C++文件，`Initialize(Local<Object>)`函数中定义了导出的函数`hello()`，使用`NODE_MODULE(NODE_GYP_MODULE_NAME, Initialize)`导出这个Initialize函数。
+1. `binding.gyp`，定义了导出的文件名`addon.node`，以及源码文件`hello.cc`，使用`node-gyp configure && node-gyp build`就可以生成Nodejs可以调用的文件`build/Release/addon.node`，本质上就是一个动态库。
+1. `index.js`，导入`addon.node`，并调用函数`addon.hello()`。
+
+> Node: Nodejs可以用NAN或N-API两种方式调用C++代码，我们这里和OWT一样是用的NAN方式，具体参考[NAN到N-API](https://xcoder.in/2017/07/01/nodejs-addon-history/)。
+
+<a name="nodejs-nan-debug"></a>
+
+使用gdb调试hello.cc步骤：
+
+1. `gdb --args node index.js `，使用gdb启动node。
+1. `b hello.cc:16`，在文件某行设置断点。
+1. `r`，运行程序，可以看到停在了断点。
+1. `bt`，可以看到调用堆栈，如下所示。
+
+```bash
+Thread 1 "node" hit Breakpoint 1, demo::Method (args=...) at ../hello.cc:16
+16	  Isolate* isolate = args.GetIsolate();
+(gdb) bt
+#0  demo::Method (args=...) at ../hello.cc:16
+#1  0x0000564ac6c14d0f in v8::internal::FunctionCallbackArguments::Call(void (*)(v8::FunctionCallbackInfo<v8::Value> const&)) ()
+#2  0x0000564ac6c7db62 in ?? ()
+```
+
+<a name="nodejs-nan-owt"></a>
+
+我们看下OWT的NAN实现，首先是`source/agent/webrtc/webrtcLib/binding.gyp`，定义了Nodejs调用的API：
+
+```js
+{
+  'targets': [{
+    'target_name': 'webrtc',
+    'sources': [
+      'addon.cc',
+      'WebRtcConnection.cc',
+      'erizo/src/erizo/DtlsTransport.cpp',
+      '<!@(find erizo/src/erizo/dtls -name "*.cpp")',
+      '../../addons/common/NodeEventRegistry.cc',
+      '../../../core/owt_base/AudioFrameConstructor.cpp',
+      '../../../core/rtc_adapter/VieRemb.cc' #20150508
+    ],
+    'cflags_cc': ['-DWEBRTC_POSIX', '-DWEBRTC_LINUX', '-DLINUX', '-DNOLINUXIF', '-DNO_REG_RPC=1', '-DHAVE_VFPRINTF=1', '-DRETSIGTYPE=void', '-DNEW_STDIO', '-DHAVE_STRDUP=1', '-DHAVE_STRLCPY=1', '-DHAVE_LIBM=1', '-DHAVE_SYS_TIME_H=1', '-DTIME_WITH_SYS_TIME_H=1'],
+    'include_dirs': [
+      "<!(node -e \"require('nan')\")",
+      'conn_handler',
+      'erizo/src/erizo',
+      '../../../core/common',
+      '../../../core/owt_base',
+      '../../../core/rtc_adapter',
+      '../../../../third_party/webrtc/src',
+      '../../../../build/libdeps/build/include',
+      '<!@(pkg-config glib-2.0 --cflags-only-I | sed s/-I//g)',
+    ],
+    'libraries': [
+      '-L$(CORE_HOME)/../../build/libdeps/build/lib',
+      '-lsrtp2',
+      '-lnice',
+      '-L$(CORE_HOME)/../../third_party/webrtc', '-lwebrtc',
+    ]
+  }]
+}
+```
+
+> Note: 可以看到它的输出是`webrtc.node`。在`addon.cc`中定义了导出给Nodejs的API。
+
+> Note: 可以看到它引用了`third_party/webrtc/src`的头文件和`libwebrtc.a`这个静态库。以及各个目录下的各种文件。
+
+接着我们看下`addon.cc`中导出的API：
+
+```cpp
+void InitAll(Handle<Object> exports) {
+  WebRtcConnection::Init(exports);
+  MediaStream::Init(exports);
+  ThreadPool::Init(exports);
+  IOThreadPool::Init(exports);
+  AudioFrameConstructor::Init(exports);
+  AudioFramePacketizer::Init(exports);
+  VideoFrameConstructor::Init(exports);
+  VideoFramePacketizer::Init(exports);
+}
+
+NODE_MODULE(addon, InitAll)
+```
+
+> Note: 这里使用的是`NODE_MODULE`，也就是NAN而不是N-API方式。在InitAll函数中，调用各个模块，导出了各种API。
+
+比如在`WebRtcConnection.cc`中导出的API：
+
+```cpp
+NAN_MODULE_INIT(WebRtcConnection::Init) {
+  // Prepare constructor template
+  Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(New);
+  tpl->SetClassName(Nan::New("WebRtcConnection").ToLocalChecked());
+  tpl->InstanceTemplate()->SetInternalFieldCount(1);
+
+  // Prototype
+  Nan::SetPrototypeMethod(tpl, "stop", stop);
+  Nan::SetPrototypeMethod(tpl, "addRemoteCandidate", addRemoteCandidate);
+```
+
+在js中是这样调用的，在`dist/webrtc_agent/webrtc/wrtcConnection.js`中：
+
+```js
+// dist/webrtc_agent/webrtc/connection.js
+class Connection extends EventEmitter {
+  constructor (id, threadPool, ioThreadPool, options = {}) {
+    this.wrtc = this._createWrtc();
+  }
+  _createWrtc() {
+    var wrtc = new addon.WebRtcConnection();
+    return wrtc;
+  }
+}
+exports.Connection = Connection;
+
+// dist/webrtc_agent/webrtc/wrtcConnection.js
+const { Connection } = require('./connection');
+  wrtc = new Connection(wrtcId, threadPool, ioThreadPool, { ipAddresses });
+        wrtc.addRemoteCandidate(msg.candidate);
+```
+
+> Note: `connection.js`中定义了js的封装，调用的就是NAN中定义的`WebRtcConnection`。
+
+> Note: `wrtcConnection.js`中调用了`connection.js`中定义的`WebRtcConnection`，以及导出的API函数`addRemoteCandidate`等等。
 

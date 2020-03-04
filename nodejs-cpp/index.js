@@ -1,5 +1,5 @@
 
-// node-gyp configure && node-gyp build && node index.js
-const addon = require('./build/Release/addon');
+// node-gyp --debug configure build && node index.js
+const addon = require('./build/Debug/addon');
 console.log('[Debug] ' + addon.hello());
 

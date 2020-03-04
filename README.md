@@ -14,7 +14,7 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server) from 
 * 在内网使用镜像快速搭建OWT，需要修改IP，参考[Usage](#usage)。
 * 有公网IP或域名时，用镜像搭建OWT服务，参考[Usage: Internet](#usage-internet)。
 
-> Note: 总结了一些OWT的重点注意事项，参考[Issues](#issues)。性能测试数据参考[Performance](#performance)。修改和编译代码参考[Develop && Debug](#develop--debug)。
+> Note: 总结了一些OWT的重点注意事项，参考[Issues](#issues)。性能测试数据参考[Performance](#performance)。修改和编译代码参考[Develop](#develop)。
 
 ## Usage
 
@@ -223,7 +223,7 @@ ip_address = "182.28.12.12" #default: ""
 * 在内网用镜像搭建OWT，使用脚本自动获取IP，自动修改OWT配置文件中的IP，参考[Usage: HostIP](#usage-hostip)。
 * 有公网IP或域名时，用镜像搭建OWT服务，参考[Usage: Internet](#usage-internet)。
 
-## Develop && Debug
+## Develop
 
 如果需要修改代码后编译：
 
@@ -317,6 +317,12 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 ```bash
 (cd dist && ./bin/init-all.sh && ./bin/start-all.sh)
 ```
+
+## Debug
+
+我们举个例子，调试OWT中的WebRTC的代码。
+
+> Remark: OWT使用Nodejs的NAN调用C++代码，调试原理参考[CodeNodejs](CodeNodejs.md#nodejs-nan-debug)，代码结构参考[CodeNodejs](CodeNodejs.md#nodejs-nan-owt)。
 
 ## Dependencies
 
