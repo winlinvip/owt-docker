@@ -266,3 +266,5 @@ root@8d2509d377de:/tmp/git/owt-docker/owt-server-4.3/dist/webrtc_agent# ldd webr
 	libblkid.so.1 => /lib/x86_64-linux-gnu/libblkid.so.1 (0x00007f7115a71000)
 ```
 
+为了了解Nodejs如何使用C++代码，我们根据[Nodejs Addons](https://nodejs.org/api/addons.html)写了个例子[nodejs-cpp](nodejs-cpp)：
+

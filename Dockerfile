@@ -7,7 +7,7 @@ FROM ubuntu:bionic
 
 # For system.
 RUN apt-get update
-RUN apt-get install -y aptitude gdb net-tools inetutils-ping vim \
+RUN apt-get install -y aptitude tree gdb net-tools inetutils-ping vim \
     ca-certificates git lsb-release mongodb nodejs npm sudo wget
 RUN npm install -g grunt-cli node-gyp
 
