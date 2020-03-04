@@ -14,7 +14,7 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server) from 
 * 在内网使用镜像快速搭建OWT，需要修改IP，参考[Usage](#usage)。
 * 有公网IP或域名时，用镜像搭建OWT服务，参考[Usage: Internet](#usage-internet)。
 
-> Note: 总结了一些OWT的重点注意事项，参考[Issues](#issues)。
+> Note: 总结了一些OWT的重点注意事项，参考[Issues](#issues)。性能测试数据参考[Performance](#performance)。修改和编译代码参考[Develop && Debug](#develop--debug)。
 
 ## Usage
 
@@ -282,6 +282,8 @@ if (config.portal.ip_address.indexOf('$') == 0) {
 ip_address = "$DOCKER_HOST" #default: ""
 ```
 
+> Remark: 这里我们只修改了JS代码，也可以修改c++代码。
+
 **>>> Step 3: 挂载本地目录到Docker。**
 
 启动Docker，并将本地目录挂载到Docker：
@@ -295,6 +297,12 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 ```
 
 **>>> Step 4: 在Docker编译和运行OWT。**
+
+若修改了c++代码，则需要编译OWT（若没有修改则可以忽略）：
+
+```bash
+./scripts/build.js -t all --check
+```
 
 这个例子中，我们只修改了JS文件，所以直接打包就可以：
 
@@ -333,6 +341,7 @@ OWT会安装很多依赖的库，详细可以参考Dockerfile中安装的依赖�
 
 1. OWT UDP端口没有复用，导致需要开一系列端口，参考[Port Range](#port-range)。
 1. OWT对外的服务发现，也就是返回给客户端的信令和UDP的IP，是通过配置文件，参考[Docker Host IP](#docker-host-ip)。
+1. OWT的webrtc_agent，使用WebRTC收发流，线程数会随着用户数增多而增多，导致SFU模式下也不能有很高并发，参考[Performance: webrtc-agent](#performance-webrtc-agent)。
 
 ## Port Range
 
@@ -475,6 +484,8 @@ Docker信息：
 > Note: 删除Views是指在管理后台，例如 https://192.168.1.4:3300/console/ 的房间设置中，删除Views然后Apply。
 
 > Note: Intel的朋友反馈，在一台8核3.5GHZUbuntu机器(台式机)上，给Docker分配4核4GB内存，跑4个SFU，CPU占用率38%左右(WebRTC)。同样条件，4个MCU页面，CPU使用87%，其中WebRTC占用22%，MCU占用65%(视频46%、音频19%)。
+
+<a name="performance-webrtc-agent"></a>
 
 下面是WebRTC这个Agent的性能指标：
 
