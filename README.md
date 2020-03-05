@@ -654,4 +654,5 @@ OWT默认是MCU+SFU模式，比如打开两个页面：
 1. OWT的webrtc_agent，使用WebRTC收发流，线程数会随着用户数增多而增多，导致SFU模式下也不能有很高并发，参考[Performance: webrtc-agent](#performance-webrtc-agent)。
 1. OWT实现了完整的集群，包括Node的负载管理和调度，服务发现和路由，而实际中比较复杂的业务系统会有自己的调度和服务管理，这导致OWT集成到现有系统比较复杂，参考[OWT Schedule](CodeNodejs.md#schedule)。
 1. OWT选择的是多PC，MCU下就是2个PC，SFU下会有很多个PC。人数比较多时OWT的SFU工作不太好，不过可以选择MCU模式。
+1. OWT每个进程一个日志文件，日志没有业务逻辑区分，全链路排查问题时会比较困难，比如一个进程服务了30个人，一般有问题的是几个人，怎么把有问题的人的日志分离出来。
 
