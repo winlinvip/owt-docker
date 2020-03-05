@@ -375,7 +375,15 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
     registry.cn-hangzhou.aliyuncs.com/ossrs/owt:debug bash
 ```
 
-> Note: 若需要修改代码和映射目录，可以按照上一步修改本地代码，或者从debug镜像将代码拷贝出来，参考[Develop](#develop)。
+当然，若需要挂载本地目录，可以按照上一步修改本地代码，或者从debug镜像将代码拷贝出来，然后执行：
+
+```bash
+cd ~/git/owt-docker/owt-server-4.3 &&
+HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
+docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+    --privileged --env DOCKER_HOST=$HostIP -v `pwd`:/tmp/git/owt-docker/owt-server-4.3 \
+    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
+```
 
 启动OWT服务：
 
@@ -439,13 +447,6 @@ OWT会安装很多依赖的库，详细可以参考Dockerfile中安装的依赖�
     * third_party/openh264, 33M
     * third_party/SVT-HEVC, 39M
     * third_party/webrtc, 448M
-
-## Issues
-
-1. OWT UDP端口没有复用，导致需要开一系列端口，参考[Port Range](#port-range)。
-1. OWT对外的服务发现，也就是返回给客户端的信令和UDP的IP，是通过配置文件，参考[Docker Host IP](#docker-host-ip)。
-1. OWT的webrtc_agent，使用WebRTC收发流，线程数会随着用户数增多而增多，导致SFU模式下也不能有很高并发，参考[Performance: webrtc-agent](#performance-webrtc-agent)。
-1. OWT实现了完整的集群，包括Node的负载管理和调度，服务发现和路由，而实际中比较复杂的业务系统会有自己的调度和服务管理，这导致OWT集成到现有系统比较复杂，参考[OWT Schedule](CodeNodejs.md#schedule)。
 
 ## Port Range
 
@@ -645,4 +646,12 @@ OWT默认是MCU+SFU模式，比如打开两个页面：
 ## Notes
 
 * [CodeNodejs](CodeNodejs.md) 关于程序结构，调用关系，Nodejs和C++代码如何组合。
+
+## Issues
+
+1. OWT UDP端口没有复用，导致需要开一系列端口，参考[Port Range](#port-range)。
+1. OWT对外的服务发现，也就是返回给客户端的信令和UDP的IP，是通过配置文件，参考[Docker Host IP](#docker-host-ip)。
+1. OWT的webrtc_agent，使用WebRTC收发流，线程数会随着用户数增多而增多，导致SFU模式下也不能有很高并发，参考[Performance: webrtc-agent](#performance-webrtc-agent)。
+1. OWT实现了完整的集群，包括Node的负载管理和调度，服务发现和路由，而实际中比较复杂的业务系统会有自己的调度和服务管理，这导致OWT集成到现有系统比较复杂，参考[OWT Schedule](CodeNodejs.md#schedule)。
+1. OWT选择的是多PC，MCU下就是2个PC，SFU下会有很多个PC。人数比较多时OWT的SFU工作不太好，不过可以选择MCU模式。
 
