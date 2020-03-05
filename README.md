@@ -445,6 +445,7 @@ OWT会安装很多依赖的库，详细可以参考Dockerfile中安装的依赖�
 1. OWT UDP端口没有复用，导致需要开一系列端口，参考[Port Range](#port-range)。
 1. OWT对外的服务发现，也就是返回给客户端的信令和UDP的IP，是通过配置文件，参考[Docker Host IP](#docker-host-ip)。
 1. OWT的webrtc_agent，使用WebRTC收发流，线程数会随着用户数增多而增多，导致SFU模式下也不能有很高并发，参考[Performance: webrtc-agent](#performance-webrtc-agent)。
+1. OWT实现了完整的集群，包括Node的负载管理和调度，服务发现和路由，而实际中比较复杂的业务系统会有自己的调度和服务管理，这导致OWT集成到现有系统比较复杂，参考[OWT Schedule](CodeNodejs.md#schedule)。
 
 ## Port Range
 

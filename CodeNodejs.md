@@ -107,6 +107,36 @@ root     44609  0.1  2.2 2881488 46852 ?       Ssl  11:47   0:00 node ./workingN
 1. 调用`manager.getNode`，分配可用的进程，比如`nodeId=webrtc-51f1cfd00ed1e9d29a47@172.17.0.2_0`。
 1. 通过消息队列返回结果，webrtc_agent就将房间调度到了这个进程上。
 
+工作进程每隔3秒进程就会发消息，若超时则会丢弃这个进程，重新开一个进程：
+
+```
+// webrtc_agent/nodeManager.js
+child.on('message', function (message) { // currently only used for sending ready message from node to agent;
+  if (message === 'READY') {
+      child.check_alive_interval = setInterval(function() {
+        if (child.READY && (child.alive_count === 0)) {
+            onNodeAbnormallyQuit && onNodeAbnormallyQuit(id, tasksOnNode(id));
+            dropNode(id);
+        }
+      }, 3000);
+```
+
+有些任务是按房间调度的，会集中在一个进程上，比如webrtc就是按房间调度，虽然一个webrtc_agent会启动多个进程，
+但是某个房间只会在一个进程上，这样在转发时避免多个进程之间传递消息。当然可以在多个节点开启webrtc_agent，
+这样一个房间会有多个节点服务它，分担压力。按房间的调度方式：
+
+```
+// webrtc_agent/nodeManager.js
+if (spec.consumeNodeByRoom) {
+  getByRoom = findNodeUsedByRoom(nodes, task.room)
+    .then((foundOne) => {
+      return foundOne
+    }, (notFound) => {
+      return findNodeUsedByRoom(idle_nodes, task.room);
+```
+
+这些调度规则和负载衡量，和具体业务逻辑比较相关。
+
 ## workingNode
 
 上面分析到，会启动子进程提供webrtc服务，启动参数如下：
