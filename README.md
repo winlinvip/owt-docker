@@ -573,6 +573,8 @@ Docker信息：
 * Engine: 19.03.5
 * Resources: CPUs 4, Memory 4GB, Swap 1GB
 
+<a name="performance-owt"></a>
+
 下面是不同人数和模式的测试数据:
 
 | 模式 | 参数 | 人数 | CPU | CPU<br/>(webrtc) | CPU<br/>(video) | CPU<br/>(audio) | Memory | Memory<br/>(webrtc) | Memory<br/>(video) | Memory<br/>(audio) | Load |
