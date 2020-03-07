@@ -382,7 +382,7 @@ cd ~/git/owt-docker/owt-server-4.3 &&
 HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
 docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
     --privileged --env DOCKER_HOST=$HostIP -v `pwd`:/tmp/git/owt-docker/owt-server-4.3 \
-    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:4.3 bash
+    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:debug bash
 ```
 
 启动OWT服务：
@@ -645,9 +645,14 @@ OWT默认是MCU+SFU模式，比如打开两个页面：
 
 这样操作后，再打开页面就只有SFU模式了，不再有video和audio的进程消耗CPU：https://192.168.1.4:3004/?forward=true
 
+> Note: SFU模式下，可以停止掉video-agent和audio-agent，流直接通过webrtc-agent中转。
+
+> Note: MCU模式下，推流先到webrt-agent，video会新建TCP连接从webrtc-agent拉流。每个人的订阅，都会从webrtc-agent拉合屏的流，webrtc-agent从video新建个TCP连接拉流。
+
 ## Notes
 
 * [CodeNodejs](CodeNodejs.md) 关于程序结构，调用关系，Nodejs和C++代码如何组合。
+* [CodeVideo](CodeVideo.md) 关于MCU的video处理部分，如果获取原始视频流，合屏，转码。
 
 ## Issues
 
