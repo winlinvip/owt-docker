@@ -368,6 +368,28 @@ tcp        0      0 172.17.0.2:38291        172.17.0.2:56992        ESTABLISHED 
 
 > Note: video(PID=1139,PORT=38291)侦听了端口，webrtc(PID=1539,PORT=56992)连接到了这个端口。webrtc从video取合并的流，每个人的流都会从video取一次。
 
+MCU有三种工作方式：
+
+```
+# vi dist/conference_agent/roomController.js +1223
+var getVideoStream = function (stream_id, format, resolution, framerate, bitrate, keyFrameInterval, simulcastRid, on_ok, on_error) {
+    var mixView = getViewOfMixStream(stream_id);
+    if (mixView) {
+        getMixedVideo(mixView, format, resolution, framerate, bitrate, keyFrameInterval, function (streamID) {}
+    } else if (streams[stream_id]) {
+        if (streams[stream_id].video) {
+            if (isSimulcastStream(stream_id)) {
+                const matchedSimId = simulcastVideoMatched(stream_id, format, resolution, framerate, bitrate, keyFrameInterval, simulcastRid);
+            } else if (isVideoMatched(videoInfo, format, resolution, framerate, bitrate, keyFrameInterval)) {
+                on_ok(stream_id);
+            } else {
+                getTranscodedVideo(format, resolution, framerate, bitrate, keyFrameInterval, stream_id, function (streamID) {}
+```
+
+* `mixer`，混流模式，默认的页面进来是这种模式，流是混在一起的，在页面选择不同的分辨率会转成不同的输出的流。
+* `transcoder`，转码模式，页面如果带了`?forward=true`参数，也就是转发每路流（不混流）模式，选择不同的分辨率时就会启动转码。
+* `simulcast`，编码时会编出多层流，这样服务器可以不编码，SFU就能输出不同的码流了，需要开启支持，详细的还需要再看看。
+
 启动GDB调试，并Attach调试Video Agent的进程：
 
 ```bash
