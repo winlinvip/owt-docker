@@ -395,3 +395,20 @@ var getVideoStream = function (stream_id, format, resolution, framerate, bitrate
 ```bash
 gdb --pid `ps aux|grep video|grep workingNode|awk '{print $2}'`
 ```
+
+设置断点，并继续运行：
+
+```bash
+b VideoMixer::VideoMixer
+c
+```
+
+打开页面进入房间，就会命中断点：
+
+```bash
+(gdb) bt
+#0  0x00007f3bf6d846a0 in VideoMixer::VideoMixer()@plt ()
+   from /tmp/git/owt-docker/owt-server-4.3/dist/video_agent/videoMixer_sw/build/Release/videoMixer-sw.node
+#1  0x00007f3bf6d8a77e in VideoMixer::New (args=...) at ../../VideoMixerWrapper.cc:65
+#2  0x000055d0ce417d0f in v8::internal::FunctionCallbackArguments::Call(void (*)(v8::FunctionCallbackInfo<v8::Value> const&)) ()
+```

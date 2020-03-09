@@ -31,6 +31,7 @@ WORKDIR /tmp/git/owt-docker/owt-server-4.3
 COPY owt-server-4.3/build/libdeps/*.bz2 ./build/libdeps/
 RUN ./scripts/installDepsUnattended.sh
 RUN ./scripts/build.js -t all --check
+#RUN ./scripts/build.js -t all --check --debug
 RUN ./scripts/pack.js -t all --install-module --sample-path $CLIENT_SAMPLE_PATH
 
 WORKDIR /tmp/git/owt-docker/owt-server-4.3

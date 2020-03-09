@@ -8,6 +8,17 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server) from 
 * `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:build`：完成了`build.js`步骤，编译好了OWT。
 * `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:system`：完成了`installDepsUnattended.sh`步骤，安装好了依赖。
 
+> Note: 针对Docker下部署和使用OWT，我们修改了一些代码和配置，参考[Here](https://github.com/winlinvip/owt-server/compare/v4.3...feature/docker-v4.3)。
+
+供Debug用的镜像：
+
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:debug`：内网演示方式[Usage: HostIP](#usage-hostip)，配置好了`docker-host`域名。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:config-debug`：修改了端口和脚本，参考[Port Range](#port-range)和[Auth Update](#auth-update)。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:build-debug`：完成了`build.js`步骤，编译好了OWT。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:system`：完成了`installDepsUnattended.sh`步骤，安装好了依赖。
+
+> Note: 针对Docker下调试OWT，我们修改了一些代码和配置，参考[Here](https://github.com/winlinvip/owt-server/compare/v4.3...feature/debug-v4.3)。
+
 以MacPro为例，如何使用镜像搭建Demo，推荐使用[Usage: HostIP](#usage-hostip)，提供了几种常见的方式：
 
 * 在内网用镜像搭建OWT，使用脚本自动获取IP，自动修改OWT配置文件中的IP，参考[Usage: HostIP](#usage-hostip)。
@@ -50,6 +61,8 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 > Note: Docker使用的版本是[owt-server 4.3](https://github.com/open-webrtc-toolkit/owt-server/releases/tag/v4.3), [owt-client 4.3](https://github.com/open-webrtc-toolkit/owt-client-javascript/releases/tag/v4.3), [IntelMediaSDK 18.4.0](https://github.com/Intel-Media-SDK/MediaSDK/releases/download/intel-mediasdk-18.4.0/MediaStack.tar.gz).
 
 > Note: OWT需要开一系列范围的UDP端口，docker映射大范围端口会有问题，所以我们只指定了50个测试端口，已经在镜像中修改了配置，参考[Port Range](#port-range)。
+
+> Note: 针对Docker下部署和使用OWT，我们修改了一些代码和配置，参考[Here](https://github.com/winlinvip/owt-server/compare/v4.3...feature/docker-v4.3)。
 
 **>>> Step 2: 设置OWT的IP信息，设置为Mac的IP地址。也可以自动获取和设置IP，参考[Usage: HostIP](#usage-hostip)。**
 
@@ -143,6 +156,8 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 
 > Note: OWT对外提供了信令和媒体服务，所以需要返回可外部访问的IP地址，我们通过环境变量传递给Docker，参考[Docker Host IP](#docker-host-ip)。
 
+> Note: 针对Docker下部署和使用OWT，我们修改了一些代码和配置，参考[Here](https://github.com/winlinvip/owt-server/compare/v4.3...feature/docker-v4.3)。
+
 **>>> Step 3: 输入命令，初始化OWT和启动服务。**
 
 ```bash
@@ -187,6 +202,8 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 > Note: Docker使用的版本是[owt-server 4.3](https://github.com/open-webrtc-toolkit/owt-server/releases/tag/v4.3), [owt-client 4.3](https://github.com/open-webrtc-toolkit/owt-client-javascript/releases/tag/v4.3), [IntelMediaSDK 18.4.0](https://github.com/Intel-Media-SDK/MediaSDK/releases/download/intel-mediasdk-18.4.0/MediaStack.tar.gz).
 
 > Note: OWT需要开一系列范围的UDP端口，docker映射大范围端口会有问题，所以我们只指定了50个测试端口，已经在镜像中修改了配置，参考[Port Range](#port-range)。
+
+> Note: 针对Docker下部署和使用OWT，我们修改了一些代码和配置，参考[Here](https://github.com/winlinvip/owt-server/compare/v4.3...feature/docker-v4.3)。
 
 **>>> Step 2: 配置公网IP或域名，参考[Use Internet Name](#use-internet-name)。**
 
@@ -337,9 +354,12 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 * 设置`nodeManager`的超时时间为3000秒(即50分钟)，默认是3秒，所以很容易在设置断点或单步运行时进程被杀掉，导致调试失败。
 * 日志级别全部设置为`DEBUG`，会显示更多的详细的日志，文件为`log4js_configuration.json`。
 
-推荐使用debug镜像启动，若不使用debug镜像，你也可以手动修改你的OWT，改动如下：
+推荐使用debug镜像启动，若不使用debug镜像，你也可以手动修改你的OWT，改动参考[这里](https://github.com/winlinvip/owt-server/compare/v4.3...feature/debug-v4.3)：
 
 ```bash
+# 编译OWT时使用特殊的参数
+./scripts/build.js -t all --check --debug
+
 # vi dist/webrtc_agent/agent.toml +3
 [agent]
 maxProcesses = 1 #default: 13
@@ -362,7 +382,14 @@ prerunProcesses = 1 #default: 2
 # vi dist/webrtc_agent/nodeManager.js +125
 child.check_alive_interval = setInterval(function() {
 }, 3000000);
+
+# vi dist/webrtc_agent/amqp_client.js +10
+var TIMEOUT = 2000000;
 ```
+
+> Note: 如果需要调试其他模块，也需要修改这些参数。
+
+> Remark: 页面超时是由后端决定的，只需要修改后端的`amqp_client.js`的超时就可以。
 
 **>>> Step 1: 启动debug镜像。**
 
