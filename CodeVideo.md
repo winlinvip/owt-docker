@@ -393,8 +393,8 @@ var getVideoStream = function (stream_id, format, resolution, framerate, bitrate
 启动GDB调试，并Attach调试Video Agent的进程：
 
 ```bash
-./dist/bin/daemon.sh stop video-agent && ./dist/bin/daemon.sh start video-agent &&
-(cd dist/video_agent && export LD_LIBRARY_PATH=./lib && gdb --pid `ps aux|grep video|grep workingNode|awk '{print $2}'`)
+cd dist/video_agent && export LD_LIBRARY_PATH=./lib &&
+gdb --pid `ps aux|grep video|grep workingNode|awk '{print $2}'`
 ```
 
 设置断点，并继续运行：
