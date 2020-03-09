@@ -16,12 +16,12 @@ ADD owt-client-javascript-4.3.tar.gz /tmp/git/owt-docker
 RUN cd /tmp/git/owt-docker/owt-client-javascript-4.3/scripts && npm install && grunt
 ENV CLIENT_SAMPLE_PATH=/tmp/git/owt-docker/owt-client-javascript-4.3/dist/samples/conference
 
-# For Intel Media SDK.
+# For Intel Media SDK?
 #ADD MediaStack-18.4.0.tar.gz /tmp/git/owt-docker
 #RUN cd /tmp/git/owt-docker/MediaStack && ./install_media.sh
 #ENV MFX_HOME=/opt/intel/mediasdk
 
-# This is needed to patch licode
+# This is needed to patch licode?
 #RUN git config --global user.email "you@example.com" && \
 #  git config --global user.name "Your Name"
 
