@@ -390,17 +390,37 @@ var getVideoStream = function (stream_id, format, resolution, framerate, bitrate
 * `transcoder`，转码模式，页面如果带了`?forward=true`参数，也就是转发每路流（不混流）模式，选择不同的分辨率时就会启动转码。
 * `simulcast`，编码时会编出多层流，这样服务器可以不编码，SFU就能输出不同的码流了，需要开启支持，详细的还需要再看看。
 
+## GDB Debug
+
+使用debug镜像启动OWT：
+
+```bash
+HostIP=`ifconfig en0 inet| grep inet|awk '{print $2}'` &&
+docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050/udp \
+    --privileged --env DOCKER_HOST=$HostIP \
+    registry.cn-hangzhou.aliyuncs.com/ossrs/owt:debug bash
+```
+
+> Note: 也可以挂载目录，或使用你自己的OWT(需要修改一些配置)，具体参考[Deubg](https://github.com/winlinvip/owt-docker#debug)。
+
+启动OWT服务：
+
+```bash
+(cd dist && ./bin/init-all.sh && ./bin/start-all.sh)
+```
+
 启动GDB调试，并Attach调试Video Agent的进程：
 
 ```bash
-cd dist/video_agent && export LD_LIBRARY_PATH=./lib &&
+./dist/bin/daemon.sh stop video-agent &&
+./dist/bin/daemon.sh start video-agent &&
 gdb --pid `ps aux|grep video|grep workingNode|awk '{print $2}'`
 ```
 
 设置断点，并继续运行：
 
 ```bash
-b VideoMixer::VideoMixer
+b mcu::VideoMixer::addInput
 c
 ```
 
@@ -408,8 +428,41 @@ c
 
 ```bash
 (gdb) bt
-#0  0x00007f3bf6d846a0 in VideoMixer::VideoMixer()@plt ()
-   from /tmp/git/owt-docker/owt-server-4.3/dist/video_agent/videoMixer_sw/build/Release/videoMixer-sw.node
-#1  0x00007f3bf6d8a77e in VideoMixer::New (args=...) at ../../VideoMixerWrapper.cc:65
-#2  0x000055d0ce417d0f in v8::internal::FunctionCallbackArguments::Call(void (*)(v8::FunctionCallbackInfo<v8::Value> const&)) ()
+#0  mcu::VideoMixer::addInput (this=0x56452e1bcb90, inputIndex=1, codec="vp8", source=0x56452e224e30, avatar="avatars/avatar_blue.180x180.yuv")
+    at ../../VideoMixer.cpp:82
+#1  0x00007f8c84ea3802 in VideoMixer::addInput (args=...) at ../../VideoMixerWrapper.cc:100
+#2  0x000056452c00dd0f in v8::internal::FunctionCallbackArguments::Call(void (*)(v8::FunctionCallbackInfo<v8::Value> const&)) ()
 ```
+
+> Note: 当然打印日志，也可以看到模块的输入输出。
+
+## VideoMixer
+
+我们调试下mixer的工作过程，MCU是默认模式，会使用mixer合流。
+
+第一个用户进入房间时，就会进入的构造函数：
+
+```cpp
+// vi source/agent/video/videoMixer/VideoMixer.cpp +23
+(gdb) p config
+$1 = (const mcu::VideoMixerConfig &) {maxInput = 16, crop = false, resolution = "vga",
+    bgColor = {r = 0, g = 0, b = 0}, useGacc = false,  MFE_timeout = 0}
+
+// ["vga"] = {width = 640, height = 480}
+// if (!VideoResolutionHelper::getVideoSize(config.resolution, rootSize)) {}
+(gdb) p rootSize
+$4 = {width = 640, height = 480}
+
+(gdb) p bgColor
+$6 = {y = 16 '\020', cb = 128 '\200', cr = 128 '\200'}
+
+// m_frameMixer.reset(new VideoFrameMixerImpl
+// m_compositor.reset(new SoftVideoCompositor
+// input.reset(new SoftInput
+// m_avatarManager.reset(new AvatarManager
+// m_generators[0].reset(new SoftFrameGenerator
+```
+
+* 创建`VideoFrameMixerImpl`对象，会判断使用了软件编码，所以创建`SoftVideoCompositor`对象。
+* 配置限定了最多合并16个视频(input)，每个input会创建一个`SoftInput`。
+*
