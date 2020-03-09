@@ -325,13 +325,23 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 若修改了c++代码，则需要编译OWT（若没有修改则可以忽略）：
 
 ```bash
-./scripts/build.js -t all --check
+./scripts/build.js -t all --check --debug
 ```
+
+> Remark: 注意我们加了debug参数，编译出调试版本。
 
 这个例子中，我们只修改了JS文件，所以直接打包就可以：
 
 ```bash
-./scripts/pack.js -t all --install-module --sample-path $CLIENT_SAMPLE_PATH
+./scripts/pack.js -t all --debug --addon-debug --install-module --sample-path $CLIENT_SAMPLE_PATH
+```
+
+> Remark: 注意我们加了debug参数，打包调试版本。
+
+为了保持命令行一直，我们将`dist-debug`链接为`dist`：
+
+```bash
+ln -sf dist-debug dist
 ```
 
 可以看到，`dist/portal/portal.toml`和`dist/portal/index.js`这两个文件都更新了。
@@ -690,4 +700,6 @@ OWT默认是MCU+SFU模式，比如打开两个页面：
 1. OWT实现了完整的集群，包括Node的负载管理和调度，服务发现和路由，而实际中比较复杂的业务系统会有自己的调度和服务管理，这导致OWT集成到现有系统比较复杂，参考[OWT Schedule](CodeNodejs.md#schedule)。
 1. OWT选择的是多PC，MCU下就是2个PC，SFU下会有很多个PC。人数比较多时OWT的SFU工作不太好，不过可以选择MCU模式。
 1. OWT每个进程一个日志文件，日志没有业务逻辑区分，全链路排查问题时会比较困难，比如一个进程服务了30个人，一般有问题的是几个人，怎么把有问题的人的日志分离出来。
+1. OWT依赖nodejs，每次打包都会下载N多个依赖，而且是从网络上下载，有时候就是会一直失败。
+1. OWT使用nodejs的NAN调用C++代码，使用gdb调试会很困难，有时候能调有时候调试不了。
 
