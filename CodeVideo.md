@@ -413,7 +413,7 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 
 ```bash
 ./dist/bin/daemon.sh stop video-agent &&
-./dist/bin/daemon.sh start video-agent &&
+./dist/bin/daemon.sh start video-agent && sleep 3 &&
 gdb --pid `ps aux|grep video|grep workingNode|awk '{print $2}'`
 ```
 
@@ -443,7 +443,12 @@ c
 第一个用户进入房间时，就会进入的构造函数：
 
 ```cpp
+(gdb) b mcu::VideoMixer::VideoMixer
+(gdb) c
+
 // vi source/agent/video/videoMixer/VideoMixer.cpp +23
+// VideoMixer::VideoMixer(const VideoMixerConfig& config)
+
 (gdb) p config
 $1 = (const mcu::VideoMixerConfig &) {maxInput = 16, crop = false, resolution = "vga",
     bgColor = {r = 0, g = 0, b = 0}, useGacc = false,  MFE_timeout = 0}
@@ -464,5 +469,135 @@ $6 = {y = 16 '\020', cb = 128 '\200', cr = 128 '\200'}
 ```
 
 * 创建`VideoFrameMixerImpl`对象，会判断使用了软件编码，所以创建`SoftVideoCompositor`对象。
-* 配置限定了最多合并16个视频(input)，每个input会创建一个`SoftInput`。
-*
+* 配置限定了最多合并16个视频(input)，每个input会创建一个`SoftInput`，它还会创建`FrameConverter`转换帧。
+* 创建两个generators，是根据fps创建的，一个是6到48帧，一个是15到60帧，它们会启动不同间隔的定时器。
+
+这时还只初始化了对象，还没有开始拉流。后面就会创建`InConnection`对象，它包装了`internalIO.node`的c++对象：
+
+```
+# vi dist/video_agent/video/index.js +217
+var addInput = function (stream_id, codec, options, avatar, on_ok, on_error) {
+    var conn = internalConnFactory.fetch(stream_id, 'in');
+    conn.connect(options);
+        if (engine.addInput(inputId, codec, conn, avatar)) {
+
+# vi dist/video_agent/video/InternalConnectionFactory.js +35
+var internalIO = require('../internalIO/build/Release/internalIO');
+var InternalIn = internalIO.In;
+function InConnection(prot, minport, maxport) {
+    switch (prot) {
+        case 'tcp':
+        case 'udp':
+            conn = new InternalIn(prot, minport, maxport);
+
+# vi source/agent/addons/internalIO/InternalInWrapper.cc +46
+void InternalIn::New(const FunctionCallbackInfo<Value>& args) {
+  InternalIn* obj = new InternalIn();
+
+# vi source/core/owt_base/InternalIn.cpp +12
+InternalIn::InternalIn(const std::string& protocol, unsigned int minPort, unsigned int maxPort) {
+    if (protocol == "tcp")
+        m_transport.reset(new owt_base::RawTransport<TCP>(this));
+
+# vi source/agent/addons/internalIO/InternalInWrapper.h +17
+class InternalIn : public FrameSource {
+```
+
+> Note: `minport`是定义在`dist/video_agent/video/index.js:453`，也就是配置文件的internal部分的端口配置，内部传输的端口范围。
+
+> Remark: 注意`InternalIn`是继承了`FrameSource`，在JS创建的是`InternalIn`，而在VideoMixer中转换的参数是`FrameSource`，取的是基类。
+
+我们可以设置断点，在连接webrtc-agent的地方：
+
+```
+(gdb) b RawTransport.cpp:114
+(gdb) c
+
+# vi source/core/owt_base/RawTransport.cpp +114
+void RawTransport<prot>::connectHandler(const boost::system::error_code& ec) {
+    case TCP:
+        m_socket.tcp.socket->set_option(tcp::no_delay(true));
+
+# vi source/core/owt_base/RawTransport.cpp +542
+void RawTransport<prot>::receiveData() {
+    m_receiveData.buffer.reset(new char[m_bufferSize]); // m_bufferSize=1600
+    if (m_tag) {
+        m_socket.tcp.socket->async_read_some(boost::asio::buffer(m_readHeader, 4),
+            boost::bind(&RawTransport::readHandler, this,
+                boost::asio::placeholders::error,
+                boost::asio::placeholders::bytes_transferred));
+
+(gdb) p/x m_readHeader
+$16 = {0x0, 0x0, 0x0, 0x8d} // 0x8d=141
+
+# vi source/core/owt_base/RawTransport.cpp +301
+void RawTransport<prot>::readHandler(const boost::system::error_code& ec, std::size_t bytes)
+    // 下面是各种异步的读写，由于不知道读了多少，所以就非常的费劲。
+    if (4 > m_receivedBytes) {
+        m_socket.tcp.socket->async_read_some(boost::asio::buffer(m_readHeader + m_receivedBytes, 4 - m_receivedBytes),
+                boost::bind(&RawTransport::readHandler, this,
+    } else {
+        payloadlen = ntohl(*(reinterpret_cast<uint32_t*>(m_readHeader)));
+        if (payloadlen > m_bufferSize) {
+            m_bufferSize = ((payloadlen * BUFFER_EXPANSION_MULTIPLIER + BUFFER_ALIGNMENT - 1) / BUFFER_ALIGNMENT) * BUFFER_ALIGNMENT;
+        }
+        m_receivedBytes = 0;
+        m_socket.tcp.socket->async_read_some(boost::asio::buffer(m_receiveData.buffer.get(), payloadlen),
+            boost::bind(&RawTransport::readPacketHandler, this,
+    }
+
+# vi source/core/owt_base/RawTransport.cpp +370
+void RawTransport<prot>::readPacketHandler(const boost::system::error_code& ec, std::size_t bytes)
+(gdb) b RawTransport.cpp:388
+(gdb) c
+# 可以看到收到的第一个包。
+(gdb) p m_receivedBytes
+$1 = 141
+```
+
+> Note: 连接到webrtc-agent后，开辟了一个1600字节的缓冲区，不断读取数据。
+
+> Note: `m_tag`设置为true（默认为true）时，会有个4字节的头，读取到m_readHeader字段，比如141字节。
+
+我们设置断点在`addInput`函数，注意在JS中的对象是`InternalIn`，而我们转成的是它的父类`FrameSource`：
+
+```
+(gdb) b VideoMixer::addInput
+(gdb) c
+
+# vi dist/video_agent/video/index.js +217
+var addInput = function (stream_id, codec, options, avatar, on_ok, on_error) {
+var conn = internalConnFactory.fetch(stream_id, 'in');
+if (engine.addInput(inputId, codec, conn, avatar)) {
+
+# vi source/agent/video/videoMixer/VideoMixerWrapper.cc +83
+void VideoMixer::addInput(const v8::FunctionCallbackInfo<v8::Value>& args) {
+int inputIndex = args[0]->Int32Value();
+String::Utf8Value param1(args[1]->ToString()); // std::string codec = std::string(*param1);
+FrameSource* param2 = ObjectWrap::Unwrap<FrameSource>(args[2]->ToObject());
+
+(gdb) p param2
+$1 = (FrameSource *) 0x561973776490
+(gdb) p param2->src
+$3 = (owt_base::FrameSource *) 0x5619738c1410
+```
+
+这时候，和webrtc-agent的通道已经建立好了，对于video来说是`in`也就是输入的：
+
+```bash
+root@8c3e5cff0312:/tmp/git/owt-docker/owt-server-4.3# ps aux|grep video|grep workingNode
+root     28863  0.2  2.9 1877980 60652 ?       tsl  12:51   0:01 node ./workingNode video-8824ee00613afb706a34@172.17.0.2_0
+
+root@8c3e5cff0312:/tmp/git/owt-docker/owt-server-4.3# lsof -p 35653 |grep TCP
+node    35653 root   24u     IPv4             983691      0t0        TCP 8c3e5cff0312:55388->8c3e5cff0312:44029 (ESTABLISHED)
+
+root@8c3e5cff0312:/tmp/git/owt-docker/owt-server-4.3# netstat -anp|grep 44029
+tcp        0      0 0.0.0.0:44029           0.0.0.0:*               LISTEN      1125/node
+tcp        0      0 172.17.0.2:44029        172.17.0.2:55388        ESTABLISHED 1125/node
+tcp      290      0 172.17.0.2:55388        172.17.0.2:44029        ESTABLISHED 35653/node
+
+root@8c3e5cff0312:/tmp/git/owt-docker/owt-server-4.3# ps aux|grep 1125
+root      1125 24.8  3.4 3162680 69872 ?       Ssl  11:38  20:58 node ./workingNode webrtc-440ffeb79a02c9a83393@172.17.0.2_0
+```
+
+> Note: 如果我们要看内部传输的数据，可以设置断点`InternalIn::onTransportData`和`InternalOut::onTransportData`。

@@ -499,7 +499,7 @@ maxport = 60050 #default: 0
 minport = 60000 #default: 0
 ```
 
-> Note: 注意别改错了，还有另外个地方也有这个配置，`[internal]`这个是配置集群的，单个Docker不用修改。
+> Note: 注意别改错了，还有另外个地方也有这个配置，`[internal]`这个是配置集群的(内部传输的端口比如webrtc-agent和video-agent之间的传输端口)，单个Docker不用修改。
 
 ## Docker Host IP
 
