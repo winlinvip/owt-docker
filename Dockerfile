@@ -31,8 +31,9 @@ WORKDIR /tmp/git/owt-docker/owt-server-4.3
 COPY owt-server-4.3/build/libdeps/*.bz2 ./build/libdeps/
 RUN ./scripts/installDepsUnattended.sh
 RUN echo "Build product" && ./scripts/build.js -t all --check
-#RUN echo "Build debug version" && ./scripts/build.js -t all --check --debug
-RUN ./scripts/pack.js -t all --install-module --sample-path $CLIENT_SAMPLE_PATH
+RUN echo "Pack product" && ./scripts/pack.js -t all --install-module --sample-path $CLIENT_SAMPLE_PATH
+#RUN echo "Build debug" && ./scripts/build.js -t all --check --debug
+#RUN echo "Pack debug" && ./scripts/pack.js -t all --debug --addon-debug --install-module --sample-path $CLIENT_SAMPLE_PATH
 
 WORKDIR /tmp/git/owt-docker/owt-server-4.3
 CMD ["pwd"]

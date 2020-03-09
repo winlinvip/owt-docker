@@ -353,6 +353,7 @@ docker run -it -p 3004:3004 -p 3300:3300 -p 8080:8080 -p 60000-60050:60000-60050
 * 设置WebRTC Agent的进程数目为1，可以直接调试这个进程，不然多个进程每个进程都要设置断点，会比较麻烦（也可以调试）。
 * 设置`nodeManager`的超时时间为3000秒(即50分钟)，默认是3秒，所以很容易在设置断点或单步运行时进程被杀掉，导致调试失败。
 * 日志级别全部设置为`DEBUG`，会显示更多的详细的日志，文件为`log4js_configuration.json`。
+* 设置`amqp_client`的超时时间为2000秒(即33分钟)，默认是2秒，所以会在调试时导致各种超时。
 
 推荐使用debug镜像启动，若不使用debug镜像，你也可以手动修改你的OWT，改动参考[这里](https://github.com/winlinvip/owt-server/compare/v4.3...feature/debug-v4.3)：
 
