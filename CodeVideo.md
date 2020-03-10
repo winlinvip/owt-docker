@@ -237,6 +237,8 @@ return getByRoom
 
 ## VideoNode
 
+![](./images/videoNode.png)
+
 上面分析了调度过程，最终一个task分配到video node后，我们可以开启video-agent的日志来看这个过程：
 
 ```
@@ -437,8 +439,7 @@ c
 
 ```bash
 (gdb) bt
-#0  mcu::VideoMixer::addInput (this=0x56452e1bcb90, inputIndex=1, codec="vp8", source=0x56452e224e30, avatar="avatars/avatar_blue.180x180.yuv")
-    at ../../VideoMixer.cpp:82
+#0  mcu::VideoMixer::addInput (this=0x56452e1bcb90, inputIndex=1, codec="vp8", source=0x56452e224e30 at ../../VideoMixer.cpp:82
 #1  0x00007f8c84ea3802 in VideoMixer::addInput (args=...) at ../../VideoMixerWrapper.cc:100
 #2  0x000056452c00dd0f in v8::internal::FunctionCallbackArguments::Call(void (*)(v8::FunctionCallbackInfo<v8::Value> const&)) ()
 ```
