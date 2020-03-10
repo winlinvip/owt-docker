@@ -436,13 +436,14 @@ c
 
 > Note: 当然打印日志，也可以看到模块的输入输出。
 
-## VideoMixer
+## VideoMixer: in
 
 我们调试下mixer的工作过程，MCU是默认模式，会使用mixer合流。
+先看in的过程，也就是从webr-agent读取包，并合流的过程。
 
 第一个用户进入房间时，就会进入的构造函数：
 
-```cpp
+```
 (gdb) b mcu::VideoMixer::VideoMixer
 (gdb) c
 
@@ -559,29 +560,6 @@ $1 = 141
 
 > Note: `m_tag`设置为true（默认为true）时，会有个4字节的头，读取到m_readHeader字段，比如141字节。
 
-我们设置断点在`addInput`函数，注意在JS中的对象是`InternalIn`，而我们转成的是它的父类`FrameSource`：
-
-```
-(gdb) b VideoMixer::addInput
-(gdb) c
-
-# vi dist/video_agent/video/index.js +217
-var addInput = function (stream_id, codec, options, avatar, on_ok, on_error) {
-var conn = internalConnFactory.fetch(stream_id, 'in');
-if (engine.addInput(inputId, codec, conn, avatar)) {
-
-# vi source/agent/video/videoMixer/VideoMixerWrapper.cc +83
-void VideoMixer::addInput(const v8::FunctionCallbackInfo<v8::Value>& args) {
-int inputIndex = args[0]->Int32Value();
-String::Utf8Value param1(args[1]->ToString()); // std::string codec = std::string(*param1);
-FrameSource* param2 = ObjectWrap::Unwrap<FrameSource>(args[2]->ToObject());
-
-(gdb) p param2
-$1 = (FrameSource *) 0x561973776490
-(gdb) p param2->src
-$3 = (owt_base::FrameSource *) 0x5619738c1410
-```
-
 这时候，和webrtc-agent的通道已经建立好了，对于video来说是`in`也就是输入的：
 
 ```bash
@@ -601,3 +579,600 @@ root      1125 24.8  3.4 3162680 69872 ?       Ssl  11:38  20:58 node ./workingN
 ```
 
 > Note: 如果我们要看内部传输的数据，可以设置断点`InternalIn::onTransportData`和`InternalOut::onTransportData`。
+
+我们设置断点在`addInput`函数，注意在JS中的对象是`InternalIn`，而我们转成的是它的父类`FrameSource`：
+
+```
+(gdb) b VideoMixer::addInput
+(gdb) c
+
+# vi dist/video_agent/video/index.js +217
+var addInput = function (stream_id, codec, options, avatar, on_ok, on_error) {
+var conn = internalConnFactory.fetch(stream_id, 'in');
+if (engine.addInput(inputId, codec, conn, avatar)) {
+
+# vi source/agent/video/videoMixer/VideoMixerWrapper.cc +83
+void VideoMixer::addInput(const v8::FunctionCallbackInfo<v8::Value>& args) {
+int inputIndex = args[0]->Int32Value();
+String::Utf8Value param1(args[1]->ToString()); // std::string codec = std::string(*param1);
+FrameSource* param2 = ObjectWrap::Unwrap<FrameSource>(args[2]->ToObject());
+int r = me->addInput(inputIndex, codec, src, avatarData); // mcu::VideoMixer* me = obj->me;
+
+(gdb) p param2
+$1 = (FrameSource *) 0x561973776490
+(gdb) p param2->src
+$3 = (owt_base::FrameSource *) 0x5619738c1410
+
+# vi source/agent/video/videoMixer/VideoFrameMixerImpl.h +150
+inline bool VideoFrameMixerImpl::addInput(int input, owt_base::FrameFormat format, owt_base::FrameSource* source, const std::string& avatar)
+    boost::shared_ptr<owt_base::VideoFrameDecoder> decoder;
+    if (!decoder && owt_base::VCMFrameDecoder::supportFormat(format))
+        decoder.reset(new owt_base::VCMFrameDecoder(format));
+    if (decoder->init(format)) {
+        boost::shared_ptr<CompositeIn> compositorIn(new CompositeIn(input, avatar, m_compositor));
+        source->addVideoDestination(decoder.get()); // 设置模块的输入和输出
+        decoder->addVideoDestination(compositorIn.get()); // compositorIn.m_compositor为SoftVideoCompositor
+        Input in{.source = source, .decoder = decoder, .compositorIn = compositorIn};
+        m_inputs[input] = in;
+
+# vi source/core/owt_base/VCMFrameDecoder.cpp +43
+bool VCMFrameDecoder::init(FrameFormat format)
+    case FRAME_FORMAT_VP8:
+        codecType = VideoCodecType::kVideoCodecVP8;
+        m_decoder.reset(VP8Decoder::Create()); // webrtc/modules/video_coding/codecs/vp8/include/vp8.h
+    if (m_decoder->InitDecode(&codecSettings, webrtc::CpuInfo::DetectNumberOfCores()) != 0) {}
+    m_decoder->RegisterDecodeCompleteCallback(this); // this: webrtc::DecodedImageCallback
+
+# vi third_party/webrtc/src/webrtc/api/video_codecs/video_decoder.h +33
+class DecodedImageCallback {
+    virtual int32_t Decoded(VideoFrame& decodedImage) = 0;
+# vi source/core/owt_base/VCMFrameDecoder.cpp +90
+int32_t VCMFrameDecoder::Decoded(VideoFrame& decodedImage)
+    Frame frame;
+    frame.format = FRAME_FORMAT_I420;
+    frame.payload = reinterpret_cast<uint8_t*>(&decodedImage);
+    frame.timeStamp = decodedImage.timestamp();
+    frame.additionalInfo.video.width = decodedImage.width();
+    frame.additionalInfo.video.height = decodedImage.height();
+    deliverFrame(frame);
+
+# vi source/core/owt_base/VCMFrameDecoder.cpp +108
+void VCMFrameDecoder::onFrame(const Frame& frame)
+    int ret = m_decoder->Decode(image, false, nullptr, &m_codecInfo);
+    if (ret != 0) {
+        m_needKeyFrame = true;
+        FeedbackMsg msg {.type = VIDEO_FEEDBACK, .cmd = REQUEST_KEY_FRAME};
+        deliverFeedbackMsg(msg);
+    }
+(gdb) p frame // 收到的第一个VP8帧
+$1 = (const owt_base::Frame &) @0x7f3468000be1: {format = owt_base::FRAME_FORMAT_VP8, payload = 0x7f3468000c09 "1\034", length = 1147,
+  timeStamp = 731670678, additionalInfo = {video = {width = 640, height = 480, isKeyFrame = false}, audio = {isRtpPacket = 128 '\200', nbSamples = 0,
+      sampleRate = 0, channels = 0 '\000'}}}
+```
+
+> Note: Mixer对于每个input会使用一个decoder，对于vp8/vp9/h.264会使用VCMFrameDecoder，其他的使用FFmpegFrameDecoder。
+
+> Note: `source:FrameSource*`也就是从webrtc收到的包，输出设置为`decoder:VCMFrameDecoder*`，也就是解码器。
+
+> Note: `decoder:VCMFrameDecoder*`也就是解码出来的图像，设置为`compositorIn:CompositeIn*`，实际上调用SoftVideoCompositor合流。
+
+> Note: Decoder实现了`webrtc::DecodedImageCallback`，这个接口是个回调，也就是解码成Frame后会调用`VCMFrameDecoder::Decoded`，会将解码的帧送其他模块处理。
+
+> Note: 从webrtc-agent收到Frame（编码的帧）后，会调用`VCMFrameDecoder::onFrame`函数，它会送给decoder解码，如果解码失败会请求关键帧。
+
+> Note: `VCM`就是`Video Coding Module`的意思。
+
+重点看下几个关键的类的绑定方法：
+
+```
+// conn，就是InternalIn，从webrtc-agent读取用户的推流的包，它实现了FrameSource类
+# vi dist/video_agent/video/index.js +217
+var addInput = function (stream_id, codec, options, avatar, on_ok, on_error) {
+    var conn = internalConnFactory.fetch(stream_id, 'in');
+    conn.connect(options);
+        if (engine.addInput(inputId, codec, conn, avatar)) {
+
+// source:FrameSource*，就是上面的conn，从webrtc读取推上来的数据包。
+// decoder:VCMFrameDecoder*，就是将source的包(编码的包)，解码成YUV图像帧Frame。
+// m_compositor:SoftVideoCompositor*，就是将Frame和Avatar合流的类，它嵌在了compositorIn中。
+# vi source/agent/video/videoMixer/VideoFrameMixerImpl.h +150
+inline bool VideoFrameMixerImpl::addInput(int input, owt_base::FrameFormat format, owt_base::FrameSource* source, const std::string& avatar)
+    boost::shared_ptr<owt_base::VideoFrameDecoder> decoder;
+    if (!decoder && owt_base::VCMFrameDecoder::supportFormat(format))
+        decoder.reset(new owt_base::VCMFrameDecoder(format));
+    if (decoder->init(format)) {
+        boost::shared_ptr<CompositeIn> compositorIn(new CompositeIn(input, avatar, m_compositor));
+        source->addVideoDestination(decoder.get()); // 设置模块的输入和输出
+        decoder->addVideoDestination(compositorIn.get()); // compositorIn.m_compositor为SoftVideoCompositor
+        Input in{.source = source, .decoder = decoder, .compositorIn = compositorIn};
+        m_inputs[input] = in;
+
+// 从conn读出来的包，送到source处理，实际上在c++层他们就是一个类。
+# vi source/core/owt_base/InternalIn.cpp +41
+owt_base::InternalIn::onTransportData
+    deliverFrame(*frame);
+# vi source/core/owt_base/MediaFramePipeline.cpp +74
+owt_base::FrameSource::deliverFrame
+    for (auto it = m_video_dests.begin(); it != m_video_dests.end(); ++it) {
+        (*it)->onFrame(frame);
+
+// source会根据dest，送到decoder处理。
+# vi source/core/owt_base/VCMFrameDecoder.cpp +108
+void VCMFrameDecoder::onFrame(const Frame& frame)
+    int ret = m_decoder->Decode(image, false, nullptr, &m_codecInfo);
+
+// 从decoder解码出来的Frame，送到SoftVideoCompositor处理。
+# vi source/core/owt_base/VCMFrameDecoder.cpp +90
+int32_t VCMFrameDecoder::Decoded(VideoFrame& decodedImage)
+    Frame frame;
+    frame.format = FRAME_FORMAT_I420;
+    frame.payload = reinterpret_cast<uint8_t*>(&decodedImage);
+    frame.timeStamp = decodedImage.timestamp();
+    frame.additionalInfo.video.width = decodedImage.width();
+    frame.additionalInfo.video.height = decodedImage.height();
+    deliverFrame(frame);
+```
+
+我们关注下webrtc-agent和mixer之间传输的包的格式：
+
+```
+// 每个包都会有4字节的长度expectedLen，后面是expectedLen字节的裸数据
+# vi source/core/owt_base/RawTransport.cpp +374
+void RawTransport<prot>::readPacketHandler(const boost::system::error_code& ec, std::size_t bytes)
+    uint32_t expectedLen = ntohl(*(reinterpret_cast<uint32_t*>(m_readHeader)));
+(gdb) p bytes
+$15 = 1188
+(gdb) p/x m_readHeader
+$13 = {0x0, 0x0, 0x4, 0xa4}
+(gdb) p 0x04a4
+$14 = 1188
+
+// expectedLen字节的裸数据，比如1188字节，结构如下：
+//      1字节的类型，比如0x8f是Frame，TDT_MEDIA_FRAME。根据类型转成不同的数据结构，比如Frame。
+//      40字节的Frame结构体，定义在owt_base::Frame中，也就是OWT的帧结构体定义，直接将buffer转成了结构体。
+//      1147字节的payload，Frame的payload数据放在后面。
+# vi source/core/owt_base/InternalIn.cpp +41
+owt_base::InternalIn::onTransportData
+    switch (buf[0]) {
+        case TDT_MEDIA_FRAME:
+            frame = reinterpret_cast<Frame*>(buf + 1);
+            frame->payload = reinterpret_cast<uint8_t*>(buf + 1 + sizeof(Frame));
+            deliverFrame(*frame);
+# vi source/core/owt_base/MediaFramePipeline.h +76
+struct Frame {
+    FrameFormat     format;
+    uint8_t*        payload;
+    uint32_t        length;
+    uint32_t        timeStamp;
+    MediaSpecInfo   additionalInfo;
+};
+
+// 总结下包格式：
+4(size)，后续的数据的长度，不包括size本身。
+1(type)，数据类型，0x8f表示是Frame。
+40(frame)，结构体Frame的数据。
+N=1147(payload)，Frame的payload数据。
+```
+
+> Note: webrtc-agent发送给mixer的数据，就是`4(size) + 1(type) + 40(frame) + N(payload)`的结构。
+
+> Note: payload的解析，详细参考`VCMFrameDecoder::onFrame`的解析过程，可能还会有padding之类的。
+
+video也可以给webrtc发送反馈消息，比如请求关键帧：
+
+```
+# vi source/core/owt_base/VCMFrameDecoder.cpp +132
+void VCMFrameDecoder::onFrame(const Frame& frame)
+    if (m_needKeyFrame) {
+        if (!frame.additionalInfo.video.isKeyFrame) {
+            FeedbackMsg msg {.type = VIDEO_FEEDBACK, .cmd = REQUEST_KEY_FRAME};
+            deliverFeedbackMsg(msg);
+
+# vi source/core/owt_base/MediaFramePipeline.cpp +118
+void FrameDestination::deliverFeedbackMsg(const FeedbackMsg& msg) {
+    if (msg.type == VIDEO_FEEDBACK) {
+        m_video_src->onFeedback(msg);
+
+# vi source/core/owt_base/InternalIn.cpp +34
+void InternalIn::onFeedback(const FeedbackMsg& msg)
+{
+    char sendBuffer[512];
+    sendBuffer[0] = TDT_FEEDBACK_MSG; // 0x5a
+    memcpy(&sendBuffer[1], reinterpret_cast<char*>(const_cast<FeedbackMsg*>(&msg)), sizeof(FeedbackMsg));
+    m_transport->sendData((char*)sendBuffer, sizeof(FeedbackMsg) + 1);
+
+(gdb) p msg
+$29 = (const owt_base::FeedbackMsg &) @0x7f34777eede0: {type = owt_base::VIDEO_FEEDBACK, cmd = owt_base::REQUEST_KEY_FRAME, data = {kbps = 0, rtcp = {
+      len = 0, buf = '\000' <repeats 127 times>}}}
+(gdb) p sizeof(FeedbackMsg)
+$30 = 140
+```
+
+> Note: 这个反馈消息是141字节，1字节(0x5a)的类型说明是FEEDBACK，后面是140字节的消息。
+
+由于要求第一帧必须是关键帧，所以前面几帧一般会忽略，会向推流发送RequestKeyframe消息，然后video会收到关键帧。
+下面我们重点看看，收到关键帧之后的处理，我们把断点设置到137行，收到了关键帧：
+
+```
+(gdb) b VCMFrameDecoder.cpp:137
+(gdb) c
+
+// 有些帧是需要padding的，264会有8字节padding，而vp8和vp9没有。
+# vi source/core/owt_base/VCMFrameDecoder.cpp +137
+void VCMFrameDecoder::onFrame(const Frame& frame)
+    size_t length       = frame.length;
+    size_t padding      = EncodedImage::GetBufferPaddingBytes(m_codecInfo.codecType);
+    size_t size         = length + padding;
+(gdb) p frame
+$35 = (const owt_base::Frame &) @0x7f3468003591: {format = owt_base::FRAME_FORMAT_VP8,
+  payload = 0x7f34680035b9 "\260\346\001\235\001*\200\002\340\001\071'", length = 19505, timeStamp = 740656818, additionalInfo = {video = {width = 640,
+      height = 480, isKeyFrame = true}, audio = {isRtpPacket = 128 '\200', nbSamples = 1, sampleRate = 0, channels = 0 '\000'}}}
+(gdb) p length
+$38 = 19505
+(gdb) p padding
+$39 = 0
+(gdb) p size
+$40 = 19505
+
+// 后面就把Frame送到解码器解码，如果有padding就会在后面加上padding数据。
+    if (padding > 0) {
+        buffer.reset(new uint8_t[size]);
+            memcpy(buffer.get(), frame.payload, length);
+            memset(buffer.get() + length, 0, padding);
+    }
+    EncodedImage image(payload, length, size);
+    image._frameType = frame.additionalInfo.video.isKeyFrame ? kVideoFrameKey : kVideoFrameDelta;
+    image._completeFrame = true;
+    image._timeStamp = frame.timeStamp;
+    int ret = m_decoder->Decode(image, false, nullptr, &m_codecInfo);
+```
+
+> Note: `m_needKeyFrame`最初是设置为true，也就是需要关键帧，拿到关键帧后，会设置为false。
+
+下面我们重点看看，从decoder解码出图像后，如何处理的：
+
+```
+(gdb) b VCMFrameDecoder::Decoded
+(gdb) c
+
+# vi source/core/owt_base/VCMFrameDecoder.cpp +90
+int32_t VCMFrameDecoder::Decoded(VideoFrame& decodedImage)
+    frame.format = FRAME_FORMAT_I420; // 设置图像格式。
+    frame.payload = reinterpret_cast<uint8_t*>(&decodedImage);
+    frame.length = 0; // payload中的Image是webrtc::VideoFrame，不需要length信息。
+    deliverFrame(frame);
+(gdb) p decodedImage
+$49 = (webrtc::VideoFrame &) @0x7f34777eebf0: {video_frame_buffer_ = {ptr_ = 0x7f34680017c0}, timestamp_rtp_ = 740659878, ntp_time_ms_ = 0,
+  timestamp_us_ = 0, rotation_ = webrtc::kVideoRotation_0}
+(gdb) p frame
+$47 = {format = owt_base::FRAME_FORMAT_I420, payload = 0x7f34777eebf0 "\300\027", length = 0, timeStamp = 740659878, additionalInfo = {video = {width = 640,
+      height = 480, isKeyFrame = false}, audio = {isRtpPacket = 128 '\200', nbSamples = 0, sampleRate = 0, channels = 0 '\000'}}}
+
+# vi source/core/owt_base/MediaFramePipeline.cpp +73
+void FrameSource::deliverFrame(const Frame& frame)
+    for (auto it = m_video_dests.begin(); it != m_video_dests.end(); ++it) {
+        (*it)->onFrame(frame); // dest设置为CompositeIn
+# vi source/core/owt_base/VideoFrameMixerImpl.h +48
+class CompositeIn : public owt_base::FrameDestination
+    void onFrame(const owt_base::Frame& frame) {
+        m_compositor->pushInput(m_index, frame);
+# vi source/core/owt_base/SoftVideoCompositor.cpp +670
+void SoftVideoCompositor::pushInput(int input, const Frame& frame)
+    webrtc::VideoFrame* i420Frame = reinterpret_cast<webrtc::VideoFrame*>(frame.payload);
+    m_inputs[input]->pushInput(i420Frame); // SoftInput
+(gdb) p m_inputs
+$51 = std::vector of length 16, capacity 16 = {{px = 0x5578cd9cbbf0, pn = {pi_ = 0x5578cd9d1eb0}}, {px = 0x5578cd9d49a0, pn = {pi_ = 0x5578cd9d4b30}}, {
+    px = 0x5578cd9d4b50, pn = {pi_ = 0x5578cd9d4d20}}, {px = 0x5578cd9d4d40, pn = {pi_ = 0x5578cd9d4f10}}, {px = 0x5578cd9d4f30, pn = {
+      pi_ = 0x5578cd9d5100}}, {px = 0x5578cd9d5120, pn = {pi_ = 0x5578cd9d52f0}}, {px = 0x5578cd9d5310, pn = {pi_ = 0x5578cd9d54e0}}, {px = 0x5578cd9d5500,
+    pn = {pi_ = 0x5578cd9d56d0}}, {px = 0x5578cd9d56f0, pn = {pi_ = 0x5578cd9d5900}}, {px = 0x5578cd9d5920, pn = {pi_ = 0x5578cd9d5b70}}, {
+    px = 0x5578cd9d5b90, pn = {pi_ = 0x5578cd9d5de0}}, {px = 0x5578cd9d5e00, pn = {pi_ = 0x5578cd9d6050}}, {px = 0x5578cd9d6070, pn = {
+      pi_ = 0x5578cd9d62c0}}, {px = 0x5578cd9d62e0, pn = {pi_ = 0x5578cd9d6530}}, {px = 0x5578cd9d6550, pn = {pi_ = 0x5578cd9d67a0}}, {px = 0x5578cd9d67c0,
+    pn = {pi_ = 0x5578cd9d6a10}}}
+(gdb) p input
+$53 = 0
+(gdb) p i420Frame
+$52 = (webrtc::VideoFrame *) 0x7f34777eebf0
+
+(gdb) b SoftInput::pushInput
+(gdb) c
+
+# vi source/core/owt_base/SoftVideoCompositor.cpp +205
+void SoftInput::pushInput(webrtc::VideoFrame *videoFrame)
+    if (!m_active)
+        return;
+    //
+    // 转换frame，用libyuv拷贝frame到dstBuffer
+    rtc::scoped_refptr<webrtc::I420Buffer> dstBuffer = m_bufferManager->getFreeBuffer(videoFrame->width(), videoFrame->height());
+    rtc::scoped_refptr<webrtc::VideoFrameBuffer> srcI420Buffer = videoFrame->video_frame_buffer();
+    if (!m_converter->convert(srcI420Buffer, dstBuffer.get())) {}
+    //
+    // 若未禁用，将dstBuffer拷贝到m_busyFrame
+    if (m_active)
+        m_busyFrame.reset(new webrtc::VideoFrame(dstBuffer, webrtc::kVideoRotation_0, 0));
+(gdb) p videoFrame
+$3 = (webrtc::VideoFrame *) 0x7fce5d0e1bf0
+(gdb) p *videoFrame
+$4 = {video_frame_buffer_ = {ptr_ = 0x7fce3c001640}, timestamp_rtp_ = 3691148645, ntp_time_ms_ = 0, timestamp_us_ = 0, rotation_ = webrtc::kVideoRotation_0}
+
+// 若宽高不符合，则用缩放。符合就直接拷贝数据。
+# vi source/core/owt_base/FrameConverter.cpp +125
+bool FrameConverter::convert(webrtc::VideoFrameBuffer *srcBuffer, webrtc::I420Buffer *dstI420Buffer)
+    if (srcBuffer->width() == dstI420Buffer->width() && srcBuffer->height() == dstI420Buffer->height()) {
+        ret = libyuv::I420Copy(
+                srcBuffer->DataY(), srcBuffer->StrideY(),
+                srcBuffer->DataU(), srcBuffer->StrideU(),
+                srcBuffer->DataV(), srcBuffer->StrideV(),
+                dstI420Buffer->MutableDataY(), dstI420Buffer->StrideY(),
+                dstI420Buffer->MutableDataU(), dstI420Buffer->StrideU(),
+                dstI420Buffer->MutableDataV(), dstI420Buffer->StrideV(),
+                dstI420Buffer->width(),        dstI420Buffer->height());
+(gdb) p srcBuffer->width()
+$11 = 640
+(gdb) p srcBuffer->height()
+$12 = 480
+```
+
+> Note: OWT一共支持16个input，每个input都是个SoftInput对象，每个对象都会维护一个m_busyFrame。收到frame后，会把frame转换后存到m_busyFrame中。
+
+目前还未合流，会有另外一个线程取出每个input的m_busyFrame，然后处理：
+
+```
+(gdb) b SoftInput::popInput
+(gdb) c
+
+#0  mcu::SoftInput::popInput (this=0x55b354706140) at ../../SoftVideoCompositor.cpp:233
+#1  0x00007fce79b44bd8 in mcu::SoftVideoCompositor::getInputFrame (this=0x55b35476a7c0, index=0) at ../../SoftVideoCompositor.cpp:709
+#2  0x00007fce79b42391 in mcu::SoftFrameGenerator::layout_regions (t=0x55b35476db50, compositeBuffer=..., at ../../SoftVideoCompositor.cpp:454
+#3  0x00007fce79b4351f in mcu::SoftFrameGenerator::layout (this=0x55b35476db50) at ../../SoftVideoCompositor.cpp:572
+#4  0x00007fce79b4228f in mcu::SoftFrameGenerator::generateFrame (this=0x55b35476db50) at ../../SoftVideoCompositor.cpp:445
+#5  0x00007fce79b41d82 in mcu::SoftFrameGenerator::onTimeout (this=0x55b35476db50) at ../../SoftVideoCompositor.cpp:402
+```
+
+> Note: 根据不同的fps，会创建两个`SoftFrameGenerator`，其实就是用不同的timeout定时器来生成帧和编码。
+
+> Note: 这里就涉及到out部分了，也就是mixer的输出，我们在下面详细看。
+
+## VideoMixer: out
+
+上面我们重点看了mixer的输入，从webrtc读取数据，然后解码出图像。下面我们重点调试下mixer的输出，也就是合流后会送给webrtc。
+
+```
+(gdb) b VideoMixer::addOutput
+(gdb) c
+
+# vi dist/video_agent/video/index.js +281
+var MediaFrameMulticaster = require('../mediaFrameMulticaster/build/Release/mediaFrameMulticaster');
+var addOutput = function (codec, resolution, framerate, bitrate, keyFrameInterval, on_ok, on_error) {
+    var dispatcher = new MediaFrameMulticaster();
+    if (engine.addOutput(stream_id,
+                         codec,
+                         resolution2String(resolution),
+                         framerate,
+                         bitrate,
+                         keyFrameInterval,
+                         dispatcher)) {
+
+# vi source/agent/video/videoMixer/VideoMixerWrapper.cc +129
+void VideoMixer::addOutput(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  FrameDestination* param6 = ObjectWrap::Unwrap<FrameDestination>(args[6]->ToObject());
+  owt_base::FrameDestination* dest = param6->dest;
+  bool r = me->addOutput(outStreamID, codec, profile, resolution, framerateFPS, bitrateKbps, keyFrameIntervalSeconds, dest);
+(gdb) i locals
+outStreamID = "238097010215339900"
+codec = "vp8"
+resolution = "vga"
+framerateFPS = 24
+bitrateKbps = 665
+keyFrameIntervalSeconds = 100
+
+# vi source/core/owt_base/MediaFrameMulticaster.h +13
+class MediaFrameMulticaster : public FrameSource, public FrameDestination, public JobTimerListener {
+
+# vi source/core/owt_base/VideoMixer.cpp +132
+bool VideoMixer::addOutput(
+    const std::string& outStreamID
+    , const std::string& codec
+    , const owt_base::VideoCodecProfile profile
+    , const std::string& resolution
+    , const unsigned int framerateFPS
+    , const unsigned int bitrateKbps
+    , const unsigned int keyFrameIntervalSeconds
+    , owt_base::FrameDestination* dest)
+    if (m_frameMixer->addOutput(m_nextOutputIndex, format, profile, vSize, framerateFPS, bitrateKbps, keyFrameIntervalSeconds, dest)) {
+(gdb) p format
+$7 = owt_base::FRAME_FORMAT_VP8
+(gdb) p vSize
+$8 = {width = 640, height = 480}
+
+# vi source/core/owt_base/VideoFrameMixerImpl.h +238
+inline bool VideoFrameMixerImpl::addOutput(int output,
+                                           owt_base::FrameFormat format,
+                                           const owt_base::VideoCodecProfile profile,
+                                           const owt_base::VideoSize& outputSize,
+                                           const unsigned int framerateFPS,
+                                           const unsigned int bitrateKbps,
+                                           const unsigned int keyFrameIntervalSeconds,
+                                           owt_base::FrameDestination* dest)
+    // 若存在编码器，且支持Simulcast，encoder->canSimulcast()
+    if (it != m_outputs.end()) { // Found a reusable encoder
+        encoder = it->second.encoder;
+        streamId = encoder->generateStream(outputSize.width, outputSize.height, framerateFPS, bitrateKbps, keyFrameIntervalSeconds, dest);
+    } else { // Never found a reusable encoder.
+        if (!encoder && owt_base::VCMFrameEncoder::supportFormat(format))
+            encoder.reset(new owt_base::VCMFrameEncoder(format, profile, m_useSimulcast));
+        streamId = encoder->generateStream(outputSize.width, outputSize.height, framerateFPS, bitrateKbps, keyFrameIntervalSeconds, dest);
+        if (!m_compositor->addOutput(outputSize.width, outputSize.height, framerateFPS, encoder.get()))
+    }
+    m_outputs[output] = out;
+
+// 初始化编码器，设置输出。
+# vi source/core/owt_base/VCMFrameEncoder.cpp +87
+int32_t VCMFrameEncoder::generateStream(uint32_t width, uint32_t height, uint32_t frameRate, uint32_t bitrateKbps, uint32_t keyFrameIntervalSeconds, owt_base::FrameDestination* dest)
+        switch (m_encodeFormat) {
+        case FRAME_FORMAT_VP8:
+            m_encoder.reset(VP8Encoder::Create());
+            VCMCodecDataBase::Codec(kVideoCodecVP8, &codecSettings);
+            codecSettings.VP8()->keyFrameInterval = frameRate * keyFrameIntervalSeconds;
+    codecSettings.startBitrate  = targetKbps;
+    codecSettings.targetBitrate = targetKbps;
+    codecSettings.maxBitrate    = targetKbps;
+    codecSettings.maxFramerate  = frameRate;
+    codecSettings.width         = width;
+    codecSettings.height        = height;
+    ret = m_encoder->InitEncode(&codecSettings, webrtc::CpuInfo::DetectNumberOfCores(), 0);
+    m_encoder->RegisterEncodeCompleteCallback(this);
+
+    boost::shared_ptr<EncodeOut> encodeOut;
+    encodeOut.reset(new EncodeOut(m_streamId, this, dest));
+    OutStream stream = {.width = width, .height = height, .simulcastId = simulcastId, .encodeOut = encodeOut};
+    m_streams[m_streamId] = stream;
+
+// 前面创建了两个generators，一个是6到48帧，一个是15到60帧
+//  isSupported()这个函数，会从起始帧开始翻倍找，比如6,12,24,48，或者15,30,60，这样看哪个能匹配到。
+# vi source/core/owt_base/SoftVideoCompositor.cpp +679
+bool SoftVideoCompositor::addOutput(const uint32_t width, const uint32_t height, const uint32_t framerateFPS, owt_base::FrameDestination *dst)
+    for (auto& generator : m_generators) {
+        if (generator->isSupported(width, height, framerateFPS)) {
+            return generator->addOutput(width, height, framerateFPS, dst);
+
+// m_outputs结构是vector<list>，每个fps可以有多个output。
+# vi source/core/owt_base/SoftVideoCompositor.cpp +361
+bool SoftFrameGenerator::addOutput(const uint32_t width, const uint32_t height, const uint32_t fps, owt_base::FrameDestination *dst) {
+    int index = m_maxSupportedFps / fps - 1;
+    Output_t output{.width = width, .height = height, .fps = fps, .dest = dst};
+    m_outputs[index].push_back(output);
+```
+
+> Note: js中创建的是`MediaFrameMulticaster`，传递到mixer转成的是基类`FrameDestination`。
+
+> Note: 若265则使用`SVTHEVCEncoder`，若vp8/vp9/h.264则使用`VCMFrameEncoder`。
+
+> Note: `VCMFrameEncoder::generateStream`若流已经存在，则可能打开simulcast，但代码注释掉了所以目前没有支持这个功能。`VCMFrameEncoder::canSimulcast`也是false的。
+
+这样编码器就建立起来了，接下来我们看看如何将编码的Frame送到webrtc-agent。
+可以看到是客户端订阅了MCU的流，video就会侦听端口(InternalOut)，webrtc-agent会主动连接到video取流。
+
+```
+(gdb) b InternalOut::InternalOut
+(gdb) b InternalOut::onFrame
+(gdb) c
+
+# vi dist/video_agent/video/index.js +540
+that.subscribe = function (connectionId, connectionType, options, callback) {
+    var conn = internalConnFactory.fetch(connectionId, 'out');
+
+// 编码后的帧，发送给webrtc-agent
+#0  owt_base::InternalOut::onFrame (this=0x556516599a20, frame=...) at ../../../../core/owt_base/InternalOut.cpp:27
+#1  0x00007f5d94058ecd in owt_base::FrameSource::deliverFrame (this=0x55651657ba90, frame=...) at ../../../../core/owt_base/MediaFramePipeline.cpp:74
+#2  0x00007f5d94049e4d in owt_base::MediaFrameMulticaster::onFrame (this=0x55651657ba90, frame=...) at ../../../../core/owt_base/MediaFrameMulticaster.cpp:33
+#3  0x00007f5d8515b1bf in owt_base::FrameSource::deliverFrame (this=0x55651655ab70, frame=...) at ../../../../../core/owt_base/MediaFramePipeline.cpp:74
+#4  0x00007f5d85162a07 in owt_base::EncodeOut::onEncoded (this=0x55651655ab70, frame=...) at ../../../../../core/owt_base/VCMFrameEncoder.h:52
+#5  0x00007f5d8516215e in owt_base::VCMFrameEncoder::OnEncodedImage (this=0x55651657bfe0, at ../../../../../core/owt_base/VCMFrameEncoder.cpp:458
+
+// 可以看到video和webrtc-agent之间建立的TCP内部连接。
+root@bcb28cc30b60:/tmp/git/owt-docker/owt-server-4.3# lsof -p 62415 |grep TCP
+node    62415 root   29u     IPv4             536457      0t0        TCP bcb28cc30b60:41330->bcb28cc30b60:45701 (ESTABLISHED)
+root@bcb28cc30b60:/tmp/git/owt-docker/owt-server-4.3# netstat -anp|grep 45701
+tcp        0      0 0.0.0.0:45701           0.0.0.0:*               LISTEN      3132/node
+tcp        0      0 172.17.0.2:45701        172.17.0.2:41330        ESTABLISHED 3132/node
+tcp        0      0 172.17.0.2:41330        172.17.0.2:45701        ESTABLISHED 62415/node
+root@bcb28cc30b60:/tmp/git/owt-docker/owt-server-4.3# ps aux|grep webrtc
+root      1105  0.5  1.7 1043604 36204 pts/0   Sl   02:51   0:59 node . -U webrtc
+root      3132 13.4 42.4 4152644 865784 ?      Ssl  02:55  24:11 node ./workingNode webrtc-24b5db69f38e74780298@172.17.0.2_2
+```
+
+我们重点看下编码器的处理逻辑：
+
+```
+(gdb) b SoftVideoCompositor.cpp:402
+(gdb) c
+
+// 从buffer取出一个图像(Frame)，已经合流之后的图像了。
+# vi source/core/owt_base/SoftVideoCompositor.cpp +402
+void SoftFrameGenerator::onTimeout()
+    rtc::scoped_refptr<webrtc::VideoFrameBuffer> compositeBuffer = generateFrame();
+    // 下面分享这个函数调用的逻辑。
+    # vi source/core/owt_base/SoftVideoCompositor.cpp +444
+    rtc::scoped_refptr<webrtc::VideoFrameBuffer> SoftFrameGenerator::generateFrame()
+        reconfigureIfNeeded(); // 更新布局
+        return layout();
+    // 将多个input合并成一个，人多了还有并行合流的逻辑。
+    # vi source/core/owt_base/SoftVideoCompositor.cpp +525
+    rtc::scoped_refptr<webrtc::VideoFrameBuffer> SoftFrameGenerator::layout()
+        bool isParallelFrameComposition = m_parallelNum > 1 && m_layout.size() > 4;
+        if (isParallelFrameComposition) {
+                boost::shared_ptr<boost::packaged_task<void>> task = boost::make_shared<boost::packaged_task<void>>(
+                        boost::bind(SoftFrameGenerator::layout_regions,
+                            this,
+                            compositeBuffer,
+                            LayoutSolution(regions_begin, regions_end))
+                        );
+        } else {
+            layout_regions(this, compositeBuffer, m_layout);
+        }
+    // 将多个input绘制到compositeBuffer中去。
+    # vi source/core/owt_base/SoftVideoCompositor.cpp +525
+    void SoftFrameGenerator::layout_regions(SoftFrameGenerator *t, rtc::scoped_refptr<webrtc::I420Buffer> compositeBuffer, const LayoutSolution &regions)
+        for (LayoutSolution::const_iterator it = regions.begin(); it != regions.end(); ++it) {
+            boost::shared_ptr<webrtc::VideoFrame> inputFrame = t->m_owner->getInputFrame(it->input);
+            rtc::scoped_refptr<webrtc::VideoFrameBuffer> inputBuffer = inputFrame->video_frame_buffer();
+            int ret = libyuv::I420Scale(
+                    inputBuffer->DataY() + src_y * inputBuffer->StrideY() + src_x, inputBuffer->StrideY(),
+                    inputBuffer->DataU() + (src_y * inputBuffer->StrideU() + src_x) / 2, inputBuffer->StrideU(),
+                    inputBuffer->DataV() + (src_y * inputBuffer->StrideV() + src_x) / 2, inputBuffer->StrideV(),
+                    src_width, src_height,
+                    compositeBuffer->MutableDataY() + dst_y * compositeBuffer->StrideY() + dst_x, compositeBuffer->StrideY(),
+                    compositeBuffer->MutableDataU() + (dst_y * compositeBuffer->StrideU() + dst_x) / 2, compositeBuffer->StrideU(),
+                    compositeBuffer->MutableDataV() + (dst_y * compositeBuffer->StrideV() + dst_x) / 2, compositeBuffer->StrideV(),
+                    cropped_dst_width, cropped_dst_height,
+                    libyuv::kFilterBox);
+
+// 将合并的图像，送到编码器编码。
+# vi source/core/owt_base/SoftVideoCompositor.cpp +404
+void SoftFrameGenerator::onTimeout()
+    rtc::scoped_refptr<webrtc::VideoFrameBuffer> compositeBuffer = generateFrame();
+    webrtc::VideoFrame compositeFrame(
+            compositeBuffer,
+            webrtc::kVideoRotation_0,
+            m_clock->TimeInMilliseconds()
+            );
+    // 转成Frame，I420格式。
+    owt_base::Frame frame;
+    frame.format = owt_base::FRAME_FORMAT_I420;
+    frame.payload = reinterpret_cast<uint8_t*>(&compositeFrame);
+    m_textDrawer->drawFrame(frame);
+    // 送编码器编码，m_outputs里面是每个不同的fps会有不同的size的编码器。
+    for (uint32_t i = 0; i <  m_outputs.size(); i++) {
+        for (auto it = m_outputs[i].begin(); it != m_outputs[i].end(); ++it) {
+            it->dest->onFrame(frame);
+    // 转换Frame，并开始编码这个Frame。
+    # vi source/core/owt_base/VCMFrameEncoder.cpp +311
+    void VCMFrameEncoder::onFrame(const Frame& frame)
+        boost::shared_ptr<webrtc::VideoFrame> videoFrame = frameConvert(frame);
+            rtc::scoped_refptr<webrtc::I420Buffer> rawBuffer = m_bufferManager->getFreeBuffer(dstFrameWidth, dstFrameHeight);
+            VideoFrame *inputFrame = reinterpret_cast<VideoFrame*>(frame.payload);
+            rtc::scoped_refptr<webrtc::VideoFrameBuffer> inputBuffer = inputFrame->video_frame_buffer();
+            if (!m_converter->convert(inputBuffer.get(), rawBuffer.get())) {}
+            dstFrame.reset(new VideoFrame(rawBuffer, inputFrame->timestamp(), 0, webrtc::kVideoRotation_0));
+        m_srv->post(boost::bind(&VCMFrameEncoder::Encode, this, videoFrame));
+
+// 上面是用bind异步调用了encode函数，最终会调用VCMFrameEncoder::encode
+(gdb) b VCMFrameEncoder::encode
+(gdb) c
+# vi source/core/owt_base/VCMFrameEncoder.cpp +379
+void VCMFrameEncoder::encode(boost::shared_ptr<webrtc::VideoFrame> frame)
+    if (m_width != frame->width() || m_height != frame->height()) {
+        ret = m_encoder->SetResolution(frame->width(), frame->height());
+        m_updateBitrateKbps = calcBitrate(m_width, m_height, m_frameRate);
+    }
+    if (m_updateBitrateKbps) {
+            bitrate.SetBitrate(0, 0, m_updateBitrateKbps * 1000);
+            ret = m_encoder->SetRateAllocation(bitrate, m_frameRate);
+    }
+    if (m_requestKeyFrame) {
+        types.push_back(kVideoFrameKey);
+    }
+    ret = m_encoder->Encode(*frame.get(), NULL, types.size() ? &types : NULL);
+```
+
+> Note: 编码时若发现宽高和改变，会动态调整编码器的宽高和码率。
