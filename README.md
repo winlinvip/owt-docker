@@ -10,15 +10,6 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server) from 
 
 > Note: 针对Docker下部署和使用OWT，我们修改了一些代码和配置，参考[Here](https://github.com/winlinvip/owt-server/compare/v4.3...feature/docker-v4.3)。
 
-供Debug用的镜像：
-
-* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:debug`：内网演示方式[Usage: HostIP](#usage-hostip)，配置好了`docker-host`域名。
-* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:config-debug`：修改了端口和脚本，参考[Port Range](#port-range)和[Auth Update](#auth-update)。
-* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:build-debug`：完成了`build.js`步骤，编译好了OWT。
-* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:system`：完成了`installDepsUnattended.sh`步骤，安装好了依赖。
-
-> Note: 针对Docker下调试OWT，我们修改了一些代码和配置，参考[Here](https://github.com/winlinvip/owt-server/compare/v4.3...feature/debug-v4.3)。
-
 以MacPro为例，如何使用镜像搭建Demo，推荐使用[Usage: HostIP](#usage-hostip)，提供了几种常见的方式：
 
 * 在内网用镜像搭建OWT，使用脚本自动获取IP，自动修改OWT配置文件中的IP，参考[Usage: HostIP](#usage-hostip)。
@@ -33,6 +24,7 @@ Docker for [owt-server](https://github.com/open-webrtc-toolkit/owt-server) from 
 * OWT几组性能数据，WebRTC性能不高，参考[Performance](#performance)。
 * OWT存在的一些问题，参考[Issues](#issues)。
 * OWT的程序结构，使用Nodejs调用C++代码，参考[CodeNodejs](CodeNodejs.md)。
+* OWT的代码分析，参考[CodeVideo](CodeVideo.md)。
 
 ## Usage
 
@@ -353,6 +345,15 @@ ln -sf dist-debug dist
 ```
 
 ## Debug
+
+供Debug用的镜像：
+
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:debug`：内网演示方式[Usage: HostIP](#usage-hostip)，配置好了`docker-host`域名。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:config-debug`：修改了端口和脚本，参考[Port Range](#port-range)和[Auth Update](#auth-update)。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:build-debug`：完成了`build.js`步骤，编译好了OWT。
+* `registry.cn-hangzhou.aliyuncs.com/ossrs/owt:system`：完成了`installDepsUnattended.sh`步骤，安装好了依赖。
+
+> Note: 针对Docker下调试OWT，我们修改了一些代码和配置，参考[Here](https://github.com/winlinvip/owt-server/compare/v4.3...feature/debug-v4.3)。
 
 我们举个例子，调试OWT中的WebRTC Agent的代码。
 
