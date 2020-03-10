@@ -690,6 +690,12 @@ OWT默认是MCU+SFU模式，比如打开两个页面：
 ## Notes
 
 * [CodeNodejs](CodeNodejs.md) 关于程序结构，调用关系，Nodejs和C++代码如何组合。
+    * [Scripts](CodeNodejs.md#scripts) 启动脚本分析。
+    * [Nodejs](CodeNodejs.md#nodejs) 调试Nodejs脚本。
+    * [Schedule](CodeNodejs.md#schedule) 调度，如何分配webrtc-agent。
+    * [WorkingNode](CodeNodejs.md#workingnode) webrtc工作进程的启动和管理。
+    * [WebRTC](CodeNodejs.md#webrtc) Nodejs如何调用WebRTC代码。
+    * [Videojs NAN](CodeNodejs.md#nodejs-nan)Videojs如何调用C++代码。
 * [CodeVideo](CodeVideo.md) 关于MCU的video处理部分，如果获取原始视频流，合屏，转码。
     * [Scripts](CodeVideo.md#scripts) 启动脚本，调试nodejs部分。
     * [Heartbeat](CodeVideo.md#heartbeat) nodejs子进程和心跳消息。
