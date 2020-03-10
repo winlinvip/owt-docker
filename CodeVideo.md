@@ -448,6 +448,8 @@ c
 
 ## VideoMixer: in
 
+![](./images/videoMixerIn.png)
+
 我们调试下mixer的工作过程，MCU是默认模式，会使用mixer合流。
 先看in的过程，也就是从webr-agent读取包，并合流的过程。
 
@@ -824,7 +826,7 @@ $39 = 0
 (gdb) p size
 $40 = 19505
 
-// 后面就把Frame送到解码器解码，如果有padding就会在后面加上padding数据。
+    // 后面就把Frame送到解码器解码，如果有padding就会在后面加上padding数据。
     if (padding > 0) {
         buffer.reset(new uint8_t[size]);
             memcpy(buffer.get(), frame.payload, length);
