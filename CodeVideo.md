@@ -946,6 +946,8 @@ $12 = 480
 
 ## VideoMixer: out
 
+![](./images/videoMixerOut.png)
+
 上面我们重点看了mixer的输入，从webrtc读取数据，然后解码出图像。下面我们重点调试下mixer的输出，也就是合流后会送给webrtc。
 
 ```
@@ -989,7 +991,7 @@ bool VideoMixer::addOutput(
     , const unsigned int framerateFPS
     , const unsigned int bitrateKbps
     , const unsigned int keyFrameIntervalSeconds
-    , owt_base::FrameDestination* dest)
+    , owt_base::FrameDestination* dest) // MediaFrameMulticaster
     if (m_frameMixer->addOutput(m_nextOutputIndex, format, profile, vSize, framerateFPS, bitrateKbps, keyFrameIntervalSeconds, dest)) {
 (gdb) p format
 $7 = owt_base::FRAME_FORMAT_VP8
@@ -1004,7 +1006,7 @@ inline bool VideoFrameMixerImpl::addOutput(int output,
                                            const unsigned int framerateFPS,
                                            const unsigned int bitrateKbps,
                                            const unsigned int keyFrameIntervalSeconds,
-                                           owt_base::FrameDestination* dest)
+                                           owt_base::FrameDestination* dest) // MediaFrameMulticaster
     // 若存在编码器，且支持Simulcast，encoder->canSimulcast()
     if (it != m_outputs.end()) { // Found a reusable encoder
         encoder = it->second.encoder;
@@ -1035,7 +1037,7 @@ int32_t VCMFrameEncoder::generateStream(uint32_t width, uint32_t height, uint32_
     m_encoder->RegisterEncodeCompleteCallback(this);
 
     boost::shared_ptr<EncodeOut> encodeOut;
-    encodeOut.reset(new EncodeOut(m_streamId, this, dest));
+    encodeOut.reset(new EncodeOut(m_streamId, this, dest)); // MediaFrameMulticaster
     OutStream stream = {.width = width, .height = height, .simulcastId = simulcastId, .encodeOut = encodeOut};
     m_streams[m_streamId] = stream;
 
@@ -1051,7 +1053,7 @@ bool SoftVideoCompositor::addOutput(const uint32_t width, const uint32_t height,
 # vi source/core/owt_base/SoftVideoCompositor.cpp +361
 bool SoftFrameGenerator::addOutput(const uint32_t width, const uint32_t height, const uint32_t fps, owt_base::FrameDestination *dst) {
     int index = m_maxSupportedFps / fps - 1;
-    Output_t output{.width = width, .height = height, .fps = fps, .dest = dst};
+    Output_t output{.width = width, .height = height, .fps = fps, .dest = dst}; // MediaFrameMulticaster
     m_outputs[index].push_back(output);
 ```
 
@@ -1064,6 +1066,8 @@ bool SoftFrameGenerator::addOutput(const uint32_t width, const uint32_t height, 
 这样编码器就建立起来了，接下来我们看看如何将编码的Frame送到webrtc-agent。
 可以看到是客户端订阅了MCU的流，video就会侦听端口(InternalOut)，webrtc-agent会主动连接到video取流。
 
+> Note: video模块的decoder是只要推流就会触发，而encoder则只有在订阅MCU的流时才会触发，所以在MCU模式下访问`forward=true`的流，也会有一个解码。
+
 ```
 (gdb) b InternalOut::InternalOut
 (gdb) b InternalOut::onFrame
@@ -1072,14 +1076,29 @@ bool SoftFrameGenerator::addOutput(const uint32_t width, const uint32_t height, 
 # vi dist/video_agent/video/index.js +540
 that.subscribe = function (connectionId, connectionType, options, callback) {
     var conn = internalConnFactory.fetch(connectionId, 'out');
+that.linkup = function (connectionId, audio_stream_id, video_stream_id, callback) {
+    outputs[video_stream_id].dispatcher.addDestination('video', connections[connectionId].connection.receiver());
 
-// 编码后的帧，发送给webrtc-agent
-#0  owt_base::InternalOut::onFrame (this=0x556516599a20, frame=...) at ../../../../core/owt_base/InternalOut.cpp:27
-#1  0x00007f5d94058ecd in owt_base::FrameSource::deliverFrame (this=0x55651657ba90, frame=...) at ../../../../core/owt_base/MediaFramePipeline.cpp:74
-#2  0x00007f5d94049e4d in owt_base::MediaFrameMulticaster::onFrame (this=0x55651657ba90, frame=...) at ../../../../core/owt_base/MediaFrameMulticaster.cpp:33
-#3  0x00007f5d8515b1bf in owt_base::FrameSource::deliverFrame (this=0x55651655ab70, frame=...) at ../../../../../core/owt_base/MediaFramePipeline.cpp:74
-#4  0x00007f5d85162a07 in owt_base::EncodeOut::onEncoded (this=0x55651655ab70, frame=...) at ../../../../../core/owt_base/VCMFrameEncoder.h:52
-#5  0x00007f5d8516215e in owt_base::VCMFrameEncoder::OnEncodedImage (this=0x55651657bfe0, at ../../../../../core/owt_base/VCMFrameEncoder.cpp:458
+// EncodeOut的下一跳dest就是MediaFrameMulticaster
+#0  owt_base::FrameSource::addVideoDestination (this=0x556e944a96e0, dest=0x556e94489c88) at ../../../../../core/owt_base/MediaFramePipeline.cpp:42
+#1  0x00007fb5bc8758ac in owt_base::EncodeOut::EncodeOut (this=0x556e944a96e0, streamId=0, owner=0x556e9448a580, dest=0x556e94489c88)
+    at ../../../../../core/owt_base/VCMFrameEncoder.h:35
+#2  0x00007fb5bc872aa1 in owt_base::VCMFrameEncoder::generateStream (this=0x556e9448a580, width=640, height=480, frameRate=24, bitrateKbps=665,
+    keyFrameIntervalSeconds=100, dest=0x556e94489c88) at ../../../../../core/owt_base/VCMFrameEncoder.cpp:244
+
+// MediaFrameMulticaster的下一跳dest就是InternalOut
+#0  owt_base::FrameSource::addVideoDestination (this=0x556e944899e0, dest=0x556e9448c1b0) at ../../../../core/owt_base/MediaFramePipeline.cpp:42
+#1  0x00007fb5bd7563aa in MediaFrameMulticaster::addDestination (args=...) at ../MediaFrameMulticasterWrapper.cc:68
+#2  0x0000556e9172fd0f in v8::internal::FunctionCallbackArguments::Call(void (*)(v8::FunctionCallbackInfo<v8::Value> const&)) ()
+
+// 编码后的帧，送给MediaFrameMulticaster，然后到InternalOut，最后发送给webrtc-agent
+#0  owt_base::InternalOut::onFrame (this=0x556e9448c1b0, frame=...) at ../../../../core/owt_base/InternalOut.cpp:27
+#1  0x00007fb5bd766ecd in owt_base::FrameSource::deliverFrame (this=0x556e944899e0, frame=...) at ../../../../core/owt_base/MediaFramePipeline.cpp:74
+#2  0x00007fb5bd757e4d in owt_base::MediaFrameMulticaster::onFrame (this=0x556e944899e0, frame=...) at ../../../../core/owt_base/MediaFrameMulticaster.cpp:33
+#3  0x00007fb5bc86e1bf in owt_base::FrameSource::deliverFrame (this=0x556e944a96e0, frame=...) at ../../../../../core/owt_base/MediaFramePipeline.cpp:74
+#4  0x00007fb5bc875a07 in owt_base::EncodeOut::onEncoded (this=0x556e944a96e0, frame=...) at ../../../../../core/owt_base/VCMFrameEncoder.h:52
+#5  0x00007fb5bc87515e in owt_base::VCMFrameEncoder::OnEncodedImage (this=0x556e9448a580, encoded_frame=..., codec_specific_info=0x7fb5a8ff0aa0,
+    fragmentation=0x7fb5a8ff0a70) at ../../../../../core/owt_base/VCMFrameEncoder.cpp:458
 
 // 可以看到video和webrtc-agent之间建立的TCP内部连接。
 root@bcb28cc30b60:/tmp/git/owt-docker/owt-server-4.3# lsof -p 62415 |grep TCP

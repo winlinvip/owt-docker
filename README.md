@@ -715,6 +715,10 @@ OWT默认是MCU+SFU模式，比如打开两个页面：
 
 > Note: [VideoMixer In](CodeVideo.md#videomixer-in) mixer输入部分，从webrtc-agent读取数据，读取Frame，解码。
 
+![](./images/videoMixerOut.png)
+
+> Note: [VideoMixer Out](CodeVideo.md#videomixer-out) mixer输出部分，合流，编码，输出到webrtc-agent。
+
 ## Issues
 
 1. OWT UDP端口没有复用，导致需要开一系列端口，参考[Port Range](#port-range)。
