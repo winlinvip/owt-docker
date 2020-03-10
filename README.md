@@ -691,6 +691,14 @@ OWT默认是MCU+SFU模式，比如打开两个页面：
 
 * [CodeNodejs](CodeNodejs.md) 关于程序结构，调用关系，Nodejs和C++代码如何组合。
 * [CodeVideo](CodeVideo.md) 关于MCU的video处理部分，如果获取原始视频流，合屏，转码。
+    * [Scripts](CodeVideo.md#scripts) 启动脚本，调试nodejs部分。
+    * [Heartbeat](CodeVideo.md#heartbeat) nodejs子进程和心跳消息。
+    * [Load Balancer](CodeVideo.md#load-balancer) nodejs子进程负载均衡。
+    * [Schedule](CodeVideo.md#schedule) 调度到video进程处理视频。
+    * [VideoNode](CodeVideo.md#videonode) video的处理流程，和webrtc-agent的通信，mixer和transcoder。
+    * [GDB Debug](CodeVideo.md#gdb-debug) 如何使用GDB调试C++代码。
+    * [VideoMixer In](CodeVideo.md#videomixer-in) mixer输入部分，从webrtc-agent读取数据，读取Frame，解码。
+    * [VideoMixer Out](CodeVideo.md#videomixer-out) mixer输出部分，合流，编码，输出到webrtc-agent。
 
 ## Issues
 

@@ -2,6 +2,15 @@
 
 OWT的video是MCU对于视频的处理，关键是合流和视频转码。
 
+* [Scripts](#scripts) 启动脚本，调试nodejs部分。
+* [Heartbeat](#heartbeat) nodejs子进程和心跳消息。
+* [Load Balancer](#load-balancer) nodejs子进程负载均衡。
+* [Schedule](#schedule) 调度到video进程处理视频。
+* [VideoNode](#videonode) video的处理流程，和webrtc-agent的通信，mixer和transcoder。
+* [GDB Debug](#gdb-debug) 如何使用GDB调试C++代码。
+* [VideoMixer In](#videomixer-in) mixer输入部分，从webrtc-agent读取数据，读取Frame，解码。
+* [VideoMixer Out](#videomixer-out) mixer输出部分，合流，编码，输出到webrtc-agent。
+
 ## Scripts
 
 启动服务的脚本`./dist/bin/start-all.sh`，它实际上调用了如下命令启动video：
